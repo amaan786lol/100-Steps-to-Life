@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Hundred Steps to Life: a Field Notes learning journal, warm and legible on mobile first. -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <meta name="theme-color" content="#356A4B" />
+    <meta name="description" content="Hundred Steps to Life: a local-first 100-day learning journey for grounded, useful growth." />
+    <link rel="icon" href="/manus-storage/100-steps-to-life-app-icon_4d2942a9.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <title>Hundred Steps to Life</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
+      }
+    </script>
+    <script defer src="%VITE_ANALYTICS_ENDPOINT%/umami" data-website-id="%VITE_ANALYTICS_WEBSITE_ID%"></script>
+  </body>
+</html>

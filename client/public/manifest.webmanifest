@@ -1,0 +1,23 @@
+{
+  "name": "100 Steps to Life",
+  "short_name": "100 Steps",
+  "description": "A local-first 100-day learning journey for grounded, useful growth.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fbf8ef",
+  "theme_color": "#356a4b",
+  "icons": [
+    {
+      "src": "/manus-storage/100-steps-to-life-app-icon-192_7e3a77c1.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/manus-storage/100-steps-to-life-app-icon-512_49a17a10.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

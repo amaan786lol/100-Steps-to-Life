@@ -1,0 +1,683 @@
+/**
+ * Hundred Steps to Life — Field Notes design reminder:
+ * A mobile field journal, not a dashboard. Warm discipline, one clear next step,
+ * route-like progress, and calm non-shaming feedback throughout.
+ */
+import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { startLogin } from "@/const";
+import { trpc } from "@/lib/trpc";
+import {
+  ArrowLeft,
+  Award,
+  BookOpen,
+  Cloud,
+  Check,
+  ChevronRight,
+  CircleHelp,
+  Compass,
+  Download,
+  Flame,
+  Footprints,
+  Home as HomeIcon,
+  Lock,
+  LogIn,
+  Map,
+  Menu,
+  MoreHorizontal,
+  Moon,
+  Mountain,
+  PencilLine,
+  RotateCcw,
+  Sparkles,
+  Sprout,
+  Sun,
+  Target,
+  Trophy,
+  Upload,
+  WifiOff,
+  X,
+  Zap,
+} from "lucide-react";
+import { getLesson, lessons, phases, type CoursePhase, type Lesson } from "../data/course";
+
+const STORAGE_KEY = "hundred-steps-to-life-v1";
+const THEME_STORAGE_KEY = "hundred-steps-to-life-theme";
+const LOGO_URL = "/manus-storage/100-steps-to-life-app-icon_4d2942a9.svg";
+const FULL_LOGO_URL = "/manus-storage/100-steps-to-life-logo_29c14b70.svg";
+const HERO_URL = "/manus-storage/hero-path_d07c97f2.jpg";
+const MAP_URL = "/manus-storage/course-map-landscape_16f3c69b.jpg";
+const BADGE_URL = "/manus-storage/achievement-badge_b80c8a23.jpg";
+const CONNECTED_WORLD_URL = "/manus-storage/connected-world_e2d9d2e1.svg";
+const ISLAND_IMAGES: Record<number, string> = {
+  1: "/manus-storage/island-firstlight-cove_d05c33ab.svg",
+  2: "/manus-storage/island-lantern-gardens_5e6aca50.svg",
+  3: "/manus-storage/island-training-ridge_0b5212a2.svg",
+  4: "/manus-storage/island-observatory_33956859.svg",
+  5: "/manus-storage/island-bridgehaven_ca43af94.svg",
+  6: "/manus-storage/island-wildwood-valley_45520909.svg",
+  7: "/manus-storage/island-makers-quay_72f41ffa.svg",
+  8: "/manus-storage/island-value-harbour_00f8a2e0.svg",
+  9: "/manus-storage/island-common-ground_5d5be2b3.svg",
+  10: "/manus-storage/island-summit_c1f4d938.svg",
+};
+
+type View = "today" | "map" | "achievements" | "progress" | "takeaways" | "lesson" | "final";
+type LessonStage = "read" | "quiz" | "action" | "complete";
+type QuizResult = { score: number; passed: boolean; perfect: boolean };
+type Theme = "morning" | "night" | "green";
+type TravelTransition = { from: CoursePhase; to: CoursePhase };
+
+function getPreviewTheme(): Theme | undefined {
+  const requested = new URLSearchParams(window.location.search).get("theme");
+  return requested === "morning" || requested === "night" || requested === "green" ? requested : undefined;
+}
+
+function getPreviewView(): View | undefined {
+  const requested = new URLSearchParams(window.location.search).get("view");
+  return requested === "today" || requested === "map" || requested === "achievements" || requested === "progress" || requested === "takeaways" || requested === "lesson" || requested === "final" ? requested : undefined;
+}
+
+type AppData = {
+  currentDay: number;
+  completedDays: number[];
+  xp: number;
+  streak: number;
+  lastCompletionDate?: string;
+  quizHistory: Record<number, QuizResult>;
+  actions: Record<number, string>;
+  takeaways: Record<number, string>;
+  bonusDays: number[];
+  finalTestComplete: boolean;
+};
+
+const defaultData: AppData = {
+  currentDay: 1,
+  completedDays: [],
+  xp: 0,
+  streak: 0,
+  quizHistory: {},
+  actions: {},
+  takeaways: {},
+  bonusDays: [],
+  finalTestComplete: false,
+};
+
+const finalQuestions = [
+  { prompt: "You miss several planned actions in a difficult week. What best reflects the course method?", options: ["Restart the entire course from Day 1", "Treat the miss as information, return to the current waypoint, and choose one honest next action", "Add more tasks to compensate", "Wait until motivation returns"], answer: 1, cue: "Foundation" },
+  { prompt: "A choice looks productive but slowly harms your character and responsibilities. What should guide your decision?", options: ["What gives the fastest visible result", "What other people will praise", "Clear intention, sound character, and what you can responsibly sustain", "The most difficult option"], answer: 2, cue: "Lantern Gardens" },
+  { prompt: "You only act when you feel motivated. What is the next useful experiment?", options: ["Build one small repeatable cue that lowers the barrier to beginning", "Wait for a stronger feeling", "Make a larger promise", "Stop setting goals"], answer: 0, cue: "Training Ridge" },
+  { prompt: "You are reacting quickly to an upsetting message. What does the Observatory ask you to do first?", options: ["Reply immediately so you do not look weak", "Assume you know the other person’s intent", "Pause, notice the story you are telling yourself, and check what you know", "Ignore the situation forever"], answer: 2, cue: "The Observatory" },
+  { prompt: "A relationship feels distant after a misunderstanding. What is the strongest next step?", options: ["Win the argument in your head", "Make one respectful attempt to listen, clarify, or repair", "Avoid them indefinitely", "Ask someone else to take sides"], answer: 1, cue: "Bridgehaven" },
+  { prompt: "Your energy is low and you have been forcing more output. What is the mature response?", options: ["Ignore your body because discipline means never resting", "Identify one recovery practice that protects tomorrow’s useful effort", "Quit every commitment", "Buy a new productivity system"], answer: 1, cue: "Wildwood Valley" },
+  { prompt: "You want to become more skilled. Which action creates the most useful evidence?", options: ["Consume more advice without practising", "Make a small real thing, review it, and improve the next version", "Wait until you feel talented", "Copy someone else’s work exactly"], answer: 1, cue: "Maker’s Quay" },
+  { prompt: "You receive money or opportunity through your work. What should remain central?", options: ["Creating useful value responsibly and managing what you earn with care", "Showing people how successful you are", "Taking the fastest option regardless of impact", "Avoiding all decisions about money"], answer: 0, cue: "Value Harbour" },
+  { prompt: "You are asked to lead a group task. What does the Common Ground perspective emphasise?", options: ["Doing everything yourself to stay in control", "Using the role to gain status", "Making responsibility clearer, listening well, and helping the group move", "Waiting for someone else to decide"], answer: 2, cue: "Common Ground" },
+  { prompt: "After 100 days, what does the Summit actually ask of you?", options: ["Prove you are now perfect", "Keep using the method with humility when life changes", "Collect a final score and stop reflecting", "Repeat only your favourite lessons"], answer: 1, cue: "The Summit" },
+];
+
+const cn = (...values: Array<string | false | undefined>) => values.filter(Boolean).join(" ");
+
+const sameDay = (first: Date, second: Date) => first.toDateString() === second.toDateString();
+const yesterday = (date: Date) => {
+  const previous = new Date();
+  previous.setDate(previous.getDate() - 1);
+  return sameDay(date, previous);
+};
+
+const clampDay = (day: number) => Math.min(100, Math.max(1, day));
+
+const phaseCompleteCount = (data: AppData, start: number) =>
+  data.completedDays.filter((day) => day >= start && day < start + 10).length;
+
+function calculateAccuracy(data: AppData) {
+  const results = Object.values(data.quizHistory);
+  if (!results.length) return 0;
+  const correct = results.reduce((total, result) => total + result.score, 0);
+  return Math.round((correct / (results.length * 3)) * 100);
+}
+
+function achievementList(data: AppData) {
+  const accuracy = calculateAccuracy(data);
+  const complete = data.completedDays.length;
+  return [
+    { id: "first", icon: Sprout, title: "First Step", detail: "Complete Day 1.", unlocked: data.completedDays.includes(1) },
+    { id: "week", icon: Flame, title: "Week One", detail: "Complete 7 days.", unlocked: complete >= 7 },
+    { id: "quick", icon: Zap, title: "Quick Learner", detail: "Pass a quiz perfectly.", unlocked: Object.values(data.quizHistory).some((result) => result.perfect) },
+    { id: "momentum", icon: Footprints, title: "Momentum", detail: "Complete 14 days.", unlocked: complete >= 14 },
+    { id: "quarter", icon: Mountain, title: "Quarter Way", detail: "Complete 25 days.", unlocked: complete >= 25 },
+    { id: "halfway", icon: Trophy, title: "Halfway", detail: "Complete 50 days.", unlocked: complete >= 50 },
+    { id: "thinker", icon: Sparkles, title: "Deep Thinker", detail: "Complete 8 hard bonus challenges.", unlocked: data.bonusDays.length >= 8 },
+    { id: "hundred", icon: Award, title: "100 Days", detail: "Complete the full course.", unlocked: complete === 100 },
+    { id: "steady", icon: Target, title: "Grounded", detail: "Reach 80% quiz accuracy after 10 lessons.", unlocked: Object.keys(data.quizHistory).length >= 10 && accuracy >= 80 },
+  ];
+}
+
+function initials(title: string) {
+  return title.split(" ").map((word) => word[0]).join("").slice(0, 2);
+}
+
+export default function Home() {
+  const { user, loading: authLoading, isAuthenticated, logout } = useAuth();
+
+  const [data, setData] = useState<AppData>(defaultData);
+  const [view, setView] = useState<View>(() => getPreviewView() ?? "today");
+  const [selectedDay, setSelectedDay] = useState(1);
+  const [stage, setStage] = useState<LessonStage>("read");
+  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [quizStatus, setQuizStatus] = useState<"idle" | "failed" | "passed">("idle");
+  const [actionText, setActionText] = useState("");
+  const [takeawayText, setTakeawayText] = useState("");
+  const [bonusDone, setBonusDone] = useState(false);
+  const [bonusNote, setBonusNote] = useState("");
+  const [celebration, setCelebration] = useState<string[]>([]);
+  const [notice, setNotice] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [theme, setTheme] = useState<Theme>(() => getPreviewTheme() ?? "morning");
+  const [travelTransition, setTravelTransition] = useState<TravelTransition | null>(null);
+  const [finalAnswers, setFinalAnswers] = useState<Record<number, number>>({});
+  const [finalStatus, setFinalStatus] = useState<"idle" | "failed" | "passed">("idle");
+  const backupQuery = trpc.progress.get.useQuery(undefined, { enabled: isAuthenticated, retry: false });
+  const backupMutation = trpc.progress.save.useMutation({
+    onSuccess: () => {
+      backupQuery.refetch();
+      setNotice("A private backup of this device’s journal was saved. Your local copy still works offline.");
+    },
+    onError: () => setNotice("Your local journal is safe. The online backup could not be saved right now."),
+  });
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as AppData;
+        setData({ ...defaultData, ...parsed, currentDay: clampDay(parsed.currentDay ?? 1) });
+      }
+    } catch {
+      setNotice("Your previous progress could not be read, so a fresh journal has been opened.");
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }, [data]);
+
+  useEffect(() => {
+    if (getPreviewTheme()) return;
+    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+    if (storedTheme === "morning" || storedTheme === "night" || storedTheme === "green") setTheme(storedTheme);
+  }, []);
+
+  useEffect(() => {
+    if (getPreviewTheme()) return;
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
+
+  const lesson = getLesson(selectedDay);
+  const todayLesson = getLesson(data.currentDay);
+  const achievements = useMemo(() => achievementList(data), [data]);
+  const coursePercent = Math.round((data.completedDays.length / 100) * 100);
+  const accuracy = calculateAccuracy(data);
+  const completedCurrent = data.completedDays.includes(selectedDay);
+  const canOpenDay = (day: number) => day <= data.currentDay || data.completedDays.includes(day);
+
+  function chooseView(next: View) {
+    setMenuOpen(false);
+    setView(next);
+    if (next !== "lesson") setNotice("");
+  }
+
+  function openLesson(day: number) {
+    if (!canOpenDay(day)) {
+      setNotice("This waypoint unlocks after you complete the current day. Take one real step first.");
+      return;
+    }
+    const previousQuiz = data.quizHistory[day];
+    setSelectedDay(day);
+    setStage(data.completedDays.includes(day) ? "complete" : previousQuiz?.passed ? "action" : "read");
+    setAnswers({});
+    setQuizStatus("idle");
+    setActionText(data.actions[day] ?? "");
+    setTakeawayText(data.takeaways[day] ?? "");
+    setBonusDone(data.bonusDays.includes(day));
+    setBonusNote("");
+    setCelebration([]);
+    setView("lesson");
+  }
+
+  function startToday() {
+    openLesson(data.currentDay);
+  }
+
+  function submitQuiz() {
+    if (Object.keys(answers).length !== lesson.quiz.length) {
+      setQuizStatus("failed");
+      setNotice("Answer every question before checking your understanding.");
+      return;
+    }
+    const score = lesson.quiz.reduce((total, question, index) => total + (answers[index] === question.answer ? 1 : 0), 0);
+    const passed = score >= 2;
+    const perfect = score === lesson.quiz.length;
+    if (!passed) {
+      setQuizStatus("failed");
+      setNotice("Not quite. Review the key idea and example, then try again. Understanding comes first.");
+      return;
+    }
+    setQuizStatus("passed");
+    setNotice(perfect ? "Excellent recall. Now turn the idea into a real action." : "You understood the core idea. Now put it to work.");
+    setData((previous) => {
+      if (previous.quizHistory[lesson.day]?.passed) return previous;
+      return {
+        ...previous,
+        xp: previous.xp + 10 + (perfect ? 5 : 0),
+        quizHistory: { ...previous.quizHistory, [lesson.day]: { score, passed, perfect } },
+      };
+    });
+    setStage("action");
+  }
+
+  function finishDay() {
+    if (actionText.trim().length < 8) {
+      setNotice("Write the small, real action you will take. A few honest words are enough.");
+      return;
+    }
+    if (bonusDone && bonusNote.trim().length < 8 && !data.bonusDays.includes(lesson.day)) {
+      setNotice("Add a short note about how you applied the hard bonus challenge, or leave it unchecked. The bonus is optional.");
+      return;
+    }
+
+    setData((previous) => {
+      if (previous.completedDays.includes(lesson.day)) return previous;
+      const now = new Date();
+      const last = previous.lastCompletionDate ? new Date(previous.lastCompletionDate) : undefined;
+      const nextStreak = !last || !sameDay(last, now) ? (last && yesterday(last) ? previous.streak + 1 : 1) : previous.streak;
+      const receivedBonus = bonusDone && !previous.bonusDays.includes(lesson.day);
+      const next: AppData = {
+        ...previous,
+        currentDay: lesson.day === previous.currentDay ? clampDay(previous.currentDay + 1) : previous.currentDay,
+        completedDays: [...previous.completedDays, lesson.day].sort((a, b) => a - b),
+        xp: previous.xp + 20 + (receivedBonus ? 60 : 0),
+        streak: nextStreak,
+        lastCompletionDate: now.toISOString(),
+        actions: { ...previous.actions, [lesson.day]: actionText.trim() },
+        takeaways: takeawayText.trim() ? { ...previous.takeaways, [lesson.day]: takeawayText.trim() } : previous.takeaways,
+        bonusDays: receivedBonus ? [...previous.bonusDays, lesson.day] : previous.bonusDays,
+      };
+      const before = new Set(achievementList(previous).filter((achievement) => achievement.unlocked).map((achievement) => achievement.id));
+      const gained = achievementList(next).filter((achievement) => achievement.unlocked && !before.has(achievement.id)).map((achievement) => achievement.title);
+      setCelebration(gained);
+      return next;
+    });
+    if (lesson.day % 10 === 0 && lesson.day < 100 && lesson.day === data.currentDay) {
+      const from = phases[Math.floor((lesson.day - 1) / 10)];
+      const to = phases[Math.floor(lesson.day / 10)];
+      setTravelTransition({ from, to });
+      window.setTimeout(() => setTravelTransition(null), 1800);
+    }
+    setStage("complete");
+    setNotice("Day recorded. What matters is the action you carry into real life.");
+  }
+
+  function openFinalTest() {
+    if (data.completedDays.length < 100) {
+      setNotice("The Final Test appears after the full route has been travelled.");
+      return;
+    }
+    setFinalAnswers({});
+    setFinalStatus(data.finalTestComplete ? "passed" : "idle");
+    chooseView("final");
+  }
+
+  function submitFinalTest() {
+    if (Object.keys(finalAnswers).length !== finalQuestions.length) {
+      setFinalStatus("failed");
+      setNotice("Answer every scenario before completing the Final Test.");
+      return;
+    }
+    const score = finalQuestions.reduce((total, question, index) => total + (finalAnswers[index] === question.answer ? 1 : 0), 0);
+    if (score < 7) {
+      setFinalStatus("failed");
+      setNotice("Not yet. Read the scenario feedback, return to what matters, then try again.");
+      return;
+    }
+    setFinalStatus("passed");
+    setData((previous) => previous.finalTestComplete ? previous : { ...previous, finalTestComplete: true, xp: previous.xp + 100 });
+    setNotice(`Final Test complete: ${score}/10 scenario choices showed sound judgment.`);
+  }
+
+  function resetProgress() {
+    const shouldReset = window.confirm("Reset all locally stored progress? This cannot be undone.");
+    if (!shouldReset) return;
+    window.localStorage.removeItem(STORAGE_KEY);
+    setData(defaultData);
+    setSelectedDay(1);
+    setStage("read");
+    setView("today");
+    setNotice("Your field journal has been reset. Day 1 is ready when you are.");
+  }
+
+  function saveBackup() {
+    if (!isAuthenticated) {
+      startLogin();
+      return;
+    }
+    backupMutation.mutate({ data: JSON.parse(JSON.stringify(data)) as Record<string, unknown> });
+  }
+
+  function restoreBackup() {
+    const saved = backupQuery.data?.data;
+    if (!saved || typeof saved.currentDay !== "number" || !Array.isArray(saved.completedDays)) {
+      setNotice("There is no usable backup to restore yet.");
+      return;
+    }
+    if (!window.confirm("Restore the saved journal to this device? It will replace the current local progress.")) return;
+    setData({ ...defaultData, ...(saved as Partial<AppData>), currentDay: clampDay(saved.currentDay) });
+    setSelectedDay(clampDay(saved.currentDay));
+    setStage("read");
+    setView("today");
+    setNotice("Your saved journal is now restored on this device.");
+  }
+
+  return (
+    <main className={cn("field-app", `theme-${theme}`)}>
+      <a className="skip-link" href="#main-content">Skip to today’s content</a>
+      <aside className="desktop-rail" aria-label="Primary navigation">
+        <Brand />
+        <nav className="rail-nav">
+          <NavButton icon={HomeIcon} label="Today" active={view === "today"} onClick={() => chooseView("today")} />
+          <NavButton icon={Map} label="Course map" active={view === "map"} onClick={() => chooseView("map")} />
+          <NavButton icon={Award} label="Achievements" active={view === "achievements"} onClick={() => chooseView("achievements")} />
+          <NavButton icon={Target} label="Progress" active={view === "progress"} onClick={() => chooseView("progress")} />
+          <NavButton icon={PencilLine} label="Takeaways" active={view === "takeaways"} onClick={() => chooseView("takeaways")} />
+        </nav>
+        <div className="rail-bottom-note">
+          <span className="note-pin">FIELD NOTE</span>
+          <p>“Do what matters when it is time to do it. If you slip, return without drama.”</p>
+        </div>
+      </aside>
+
+      <section className="app-shell">
+        <header className="topbar">
+          <div className="mobile-brand"><Brand compact /></div>
+          <div className="topbar-spacer" />
+          <div className="desktop-theme-control"><ThemeSelector theme={theme} onChange={setTheme} /></div>
+          <div className="topbar-stats" aria-label="Your current progress">
+            <div className="top-stat"><Flame aria-hidden="true" /><span>{data.streak}</span><span className="stat-word">returns</span></div>
+            <div className="top-stat xp"><Zap aria-hidden="true" /><span>{data.xp}</span><span className="stat-word">practice marks</span></div>
+          </div>
+          <div className="mobile-menu-wrap">
+            <button className="icon-button mobile-menu-button" aria-label="Open menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
+              {menuOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
+            </button>
+            {menuOpen && (
+              <div className="mobile-popover" role="menu">
+                <div className="mobile-theme-control"><span>APPEARANCE</span><ThemeSelector theme={theme} onChange={setTheme} compact /></div>
+                <button role="menuitem" onClick={() => chooseView("achievements")}>Achievements</button>
+                <button role="menuitem" onClick={() => chooseView("takeaways")}>Takeaways</button>
+                <button role="menuitem" onClick={resetProgress}>Reset local progress</button>
+              </div>
+            )}
+          </div>
+        </header>
+
+        <div id="main-content" className="main-content" tabIndex={-1}>
+          {notice && <div className="notice" role="status"><CircleHelp aria-hidden="true" />{notice}</div>}
+          {view === "today" && <TodayView data={data} lesson={todayLesson} coursePercent={coursePercent} onStart={startToday} onMap={() => chooseView("map")} onAchievements={() => chooseView("achievements")} account={{ loading: authLoading, signedIn: isAuthenticated, name: user?.name ?? undefined, hasBackup: Boolean(backupQuery.data), saving: backupMutation.isPending }} onSignIn={() => startLogin()} onSaveBackup={saveBackup} onRestoreBackup={restoreBackup} onLogout={logout} />}
+          {view === "map" && <CourseMap data={data} onOpen={openLesson} onFinal={openFinalTest} />}
+          {view === "achievements" && <AchievementsView achievements={achievements} data={data} />}
+          {view === "progress" && <ProgressView data={data} coursePercent={coursePercent} accuracy={accuracy} />}
+          {view === "takeaways" && <TakeawaysView data={data} onStart={startToday} />}
+          {view === "lesson" && (
+            <LessonView
+              lesson={lesson}
+              stage={stage}
+              answers={answers}
+              setAnswers={setAnswers}
+              quizStatus={quizStatus}
+              onTakeQuiz={() => { setStage("quiz"); setNotice(""); }}
+              onSubmitQuiz={submitQuiz}
+              actionText={actionText}
+              setActionText={setActionText}
+              takeawayText={takeawayText}
+              setTakeawayText={setTakeawayText}
+              bonusDone={bonusDone}
+              setBonusDone={setBonusDone}
+              bonusNote={bonusNote}
+              setBonusNote={setBonusNote}
+              completed={completedCurrent}
+              celebration={celebration}
+              onFinish={finishDay}
+              onBack={() => chooseView("today")}
+              onNext={() => selectedDay === 100 && data.completedDays.includes(100) ? openFinalTest() : selectedDay < data.currentDay ? openLesson(selectedDay + 1) : chooseView("today")}
+            />
+          )}
+          {view === "final" && <FinalTestView data={data} answers={finalAnswers} setAnswers={setFinalAnswers} status={finalStatus} onSubmit={submitFinalTest} onBack={() => chooseView("map")} />}
+        </div>
+
+        <nav className="mobile-tabbar" aria-label="Mobile primary navigation">
+          <MobileNavButton icon={HomeIcon} label="Today" active={view === "today"} onClick={() => chooseView("today")} />
+          <MobileNavButton icon={Map} label="Journey" active={view === "map"} onClick={() => chooseView("map")} />
+          <MobileNavButton icon={Target} label="Progress" active={view === "progress"} onClick={() => chooseView("progress")} />
+        </nav>
+      </section>
+      {travelTransition && <IslandTravelTransition transition={travelTransition} onSkip={() => setTravelTransition(null)} />}
+    </main>
+  );
+}
+
+function Brand({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className={cn("brand", compact && "brand-compact")}>
+      <img src={LOGO_URL} alt="" className="brand-mark" />
+      {!compact && <img src={FULL_LOGO_URL} alt="100 Steps to Life" className="brand-full-logo" />}
+      {compact && <span className="sr-only">Hundred Steps to Life</span>}
+    </div>
+  );
+}
+
+function NavButton({ icon: Icon, label, active, onClick }: { icon: typeof HomeIcon; label: string; active: boolean; onClick: () => void }) {
+  return <button className={cn("rail-link", active && "active")} onClick={onClick}><Icon aria-hidden="true" /><span>{label}</span>{active && <span className="active-dot" />}</button>;
+}
+
+function MobileNavButton({ icon: Icon, label, active, onClick }: { icon: typeof HomeIcon; label: string; active: boolean; onClick: () => void }) {
+  return <button className={cn("mobile-nav-link", active && "active")} onClick={onClick}><Icon aria-hidden="true" /><span>{label}</span></button>;
+}
+
+function ThemeSelector({ theme, onChange, compact = false }: { theme: Theme; onChange: (theme: Theme) => void; compact?: boolean }) {
+  return (
+    <div className={cn("theme-picker", compact && "compact")} aria-label="Appearance mode">
+      <button className={cn("theme-choice", theme === "morning" && "selected")} aria-pressed={theme === "morning"} onClick={() => onChange("morning")}><Sun aria-hidden="true" /><span>Morning</span></button>
+      <button className={cn("theme-choice", theme === "night" && "selected")} aria-pressed={theme === "night"} onClick={() => onChange("night")}><Moon aria-hidden="true" /><span>Night</span></button>
+      <button className={cn("theme-choice", theme === "green" && "selected")} aria-pressed={theme === "green"} onClick={() => onChange("green")}><Sprout aria-hidden="true" /><span>Green</span></button>
+    </div>
+  );
+}
+
+type AccountState = { loading: boolean; signedIn: boolean; name?: string; hasBackup: boolean; saving: boolean };
+
+function TodayView({ data, lesson, coursePercent, onStart, onMap, onAchievements, account, onSignIn, onSaveBackup, onRestoreBackup, onLogout }: { data: AppData; lesson: Lesson; coursePercent: number; onStart: () => void; onMap: () => void; onAchievements: () => void; account: AccountState; onSignIn: () => void; onSaveBackup: () => void; onRestoreBackup: () => void; onLogout: () => void }) {
+  const isFirstStep = data.completedDays.length === 0;
+  return (
+    <div className="view-stack today-view">
+      <section className="today-hero" style={{ backgroundImage: `linear-gradient(98deg, rgba(16, 31, 39, .92) 0%, rgba(16, 31, 39, .62) 45%, rgba(16, 31, 39, .16) 100%), url(${HERO_URL})` }}>
+        <div className="hero-content">
+          <div className="eyebrow-light"><Compass aria-hidden="true" /> {isFirstStep ? "YOUR FIELD GUIDE BEGINS" : "TODAY’S WAYPOINT"}</div>
+          <p className="hero-day">DAY <span>{String(lesson.day).padStart(2, "0")}</span> <i /> {lesson.phase.shortTitle.toUpperCase()}</p>
+          <h1>{lesson.title}</h1>
+          <p className="hero-copy">{lesson.why}</p>
+          <button className="primary-button hero-button" onClick={onStart}><BookOpen aria-hidden="true" /> {isFirstStep ? "Begin Day 1" : "Open today’s lesson"}<ChevronRight aria-hidden="true" /></button>
+        </div>
+        <div className="hero-footer"><span>THE COURSE METHOD</span><p>Learn. Understand. Apply. Reflect.</p></div>
+      </section>
+
+      <section className="today-grid">
+        <article className="paper-card lesson-preview-card">
+          <div className="card-heading"><div><span className="eyebrow">TODAY’S FOCUS</span><h2>One step, then the next.</h2></div><span className="day-stamp">{String(lesson.day).padStart(2, "0")}</span></div>
+          <div className="lesson-preview">
+            <p className="label">KEY IDEA</p><p>{lesson.keyIdea}</p>
+          </div>
+          <div className="today-action-preview"><div className="action-icon"><Target aria-hidden="true" /></div><div><span className="label">TODAY’S ACTION</span><p>{lesson.actionPrompt}</p></div></div>
+          <button className="text-button" onClick={onStart}>Learn, understand, then act <ChevronRight aria-hidden="true" /></button>
+        </article>
+
+        <aside className="journey-card">
+          <div className="journey-head"><div><span className="eyebrow-light">ROUTE SO FAR</span><h2>{data.completedDays.length} <small>steps travelled</small></h2></div><Footprints aria-hidden="true" /></div>
+          <div className="journey-meter" aria-label={`${coursePercent}% of course complete`}><span style={{ width: `${Math.max(coursePercent, 2)}%` }} /></div>
+          <div className="journey-route" aria-hidden="true"><span className="route-node done" /><span className="route-line" /><span className={cn("route-node", data.currentDay > 1 && "done")} /><span className="route-line" /><span className="route-node current" /><span className="route-line" /><span className="route-node" /></div>
+          <p>{coursePercent === 0 ? "Your first honest step is waiting." : `${coursePercent}% travelled. The path does not need solving today.`}</p>
+          <button className="secondary-dark-button" onClick={onMap}>View course map <ChevronRight aria-hidden="true" /></button>
+        </aside>
+      </section>
+
+      <section className="today-lower-grid field-notes-row">
+        <article className="mini-paper-card"><div className="mini-icon moss"><Flame aria-hidden="true" /></div><div><span className="label">RETURN RHYTHM</span><h3>{data.streak} return{data.streak === 1 ? "" : "s"}</h3><p>The route accepts an honest return.</p></div></article>
+        <article className="mini-paper-card"><div className="mini-icon gold"><Zap aria-hidden="true" /></div><div><span className="label">PRACTICE MARKS</span><h3>{data.xp}</h3><p>Evidence of learning put into action.</p></div></article>
+        <article className="mini-paper-card achievement-teaser"><img src={BADGE_URL} alt="" /><div><span className="label">MILESTONES</span><h3>{achievementList(data).filter((item) => item.unlocked).length} unlocked</h3><button className="text-button compact" onClick={onAchievements}>See achievements <ChevronRight aria-hidden="true" /></button></div></article>
+      </section>
+
+      {isFirstStep && <FirstlightCove onStart={onStart} />}
+      <CourseMethod />
+      <AccountBackup account={account} onSignIn={onSignIn} onSaveBackup={onSaveBackup} onRestoreBackup={onRestoreBackup} onLogout={onLogout} />
+      {isFirstStep && <section className="course-threshold"><div><span className="eyebrow-light">THE START OF THE COURSE</span><h2>Start improving<br /><em>your life.</em></h2><p>Begin at Firstlight Cove. You only need to take the first honest step.</p></div><button className="hero-button primary-button" onClick={onStart}>Start improving your life. <ChevronRight aria-hidden="true" /></button></section>}
+    </div>
+  );
+}
+
+function FirstlightCove({ onStart }: { onStart: () => void }) {
+  return <section className="cove-entry">
+    <div className="cove-copy"><span className="eyebrow">YOUR OPENING ISLAND</span><h2>Firstlight<br /><em>Cove.</em></h2><p>A calm place to begin: notice where you are, choose a direction, and take one honest step inland.</p><div className="cove-meta"><span>FOUNDATION</span><i /> <span>DAYS 1–10</span></div></div>
+    <div className="cove-map" aria-label="Firstlight Cove route with Day 1 active">
+      <div className="cove-sun" aria-hidden="true" /><div className="cove-water" aria-hidden="true" /><div className="cove-shore" aria-hidden="true" /><div className="cove-trail" aria-hidden="true" />
+      {Array.from({ length: 10 }, (_, index) => index === 0 ? <button className="cove-waypoint current" key={index} onClick={onStart} aria-label="Open Day 1: Arrival"><span>01</span><small>Arrival</small></button> : <span className="cove-waypoint locked" key={index} aria-label={`Day ${index + 1}, locked`}><span>{String(index + 1).padStart(2, "0")}</span></span>)}
+    </div>
+  </section>;
+}
+
+function CourseMethod() {
+  return <section className="course-method"><div className="method-heading"><span className="eyebrow">HOW THIS COURSE IS MADE</span><h2>Useful ideas are only the<br /><em>beginning.</em></h2><p>Hundred Steps to Life is shaped by the One Percent Philosophy: a small, meaningful improvement becomes powerful when it is understood, applied, and returned to.</p></div><div className="method-rules"><article><span>01</span><h3>Learn the idea</h3><p>Each lesson gives one practical idea, not a pile of vague motivation.</p></article><article><span>02</span><h3>Check understanding</h3><p>A short knowledge check separates recognition from real understanding.</p></article><article><span>03</span><h3>Use it in life</h3><p>The day only becomes complete when you name a small, real action.</p></article><article><span>04</span><h3>Return with honesty</h3><p>Missed steps are information. The route asks for a return, not a performance.</p></article></div><div className="method-boundary"><Compass aria-hidden="true" /><p>Modules use Islamic principles, careful historical thought, and practical disciplines to support a responsible life. This course is a guide for reflection and action—not a substitute for qualified religious, medical, legal, or mental-health advice.</p></div></section>;
+}
+
+function AccountBackup({ account, onSignIn, onSaveBackup, onRestoreBackup, onLogout }: { account: AccountState; onSignIn: () => void; onSaveBackup: () => void; onRestoreBackup: () => void; onLogout: () => void }) {
+  return <section className="account-backup"><div className="backup-icon"><WifiOff aria-hidden="true" /></div><div className="backup-copy"><span className="eyebrow">YOUR JOURNAL, YOUR DEVICE</span><h2>Works offline.<br /><em>Back up when ready.</em></h2><p>Your progress, actions, and reflections save on this device first. Sign in only when you want a private backup to restore on another device.</p></div><div className="backup-actions">{account.loading ? <span className="backup-status">Checking your journal…</span> : !account.signedIn ? <><button className="primary-button" onClick={onSignIn}><LogIn aria-hidden="true" /> Sign in to back up</button><small><Cloud aria-hidden="true" /> Offline progress stays available either way.</small></> : <><span className="backup-status"><Check aria-hidden="true" /> Signed in{account.name ? ` as ${account.name}` : ""}</span><button className="primary-button" onClick={onSaveBackup} disabled={account.saving}><Upload aria-hidden="true" /> {account.saving ? "Saving backup…" : "Save private backup"}</button>{account.hasBackup && <button className="backup-secondary" onClick={onRestoreBackup}><Download aria-hidden="true" /> Restore saved journal</button>}<button className="backup-text" onClick={onLogout}>Sign out</button></>}</div></section>;
+}
+
+function CourseMap({ data, onOpen, onFinal }: { data: AppData; onOpen: (day: number) => void; onFinal: () => void }) {
+  const fullRouteComplete = data.completedDays.length === 100;
+  const activeIslandId = Math.min(10, Math.floor((Math.max(1, data.currentDay) - 1) / 10) + 1);
+  return (
+    <div className="view-stack">
+      <section className="view-heading map-heading">
+        <div><span className="eyebrow">THE ISLAND JOURNEY</span><h1>Ten places to<br /><em>remember what matters.</em></h1><p>Each island holds ten lessons. Its landscape is a memory cue; its waypoints are the real work.</p></div>
+        <div className="map-count"><strong>{data.completedDays.length}</strong><span>steps travelled</span></div>
+      </section>
+      <section className={cn("island-world", fullRouteComplete && "world-complete")} aria-label="Ten-island course map">
+        <div className="world-horizon" aria-hidden="true"><span /></div>
+        {fullRouteComplete ? <section className="connected-world-stage" style={{ backgroundImage: `linear-gradient(90deg, rgba(10,33,42,.18), rgba(10,33,42,.03)), url(${CONNECTED_WORLD_URL})` }}><div className="connected-world-copy"><span className="eyebrow-light">THE ISLANDS CONNECT</span><h2>One world.<br /><em>One next choice.</em></h2><p>The separate places were always parts of one life. The route now asks you to use what you learned without a lesson telling you what to do next.</p></div><button className={cn("final-quest", data.finalTestComplete && "complete")} onClick={onFinal}><span className="final-star">✦</span><div><span className="eyebrow-light">THE CENTRE QUEST</span><h2>{data.finalTestComplete ? "Final Test recorded" : "The Final Test"}</h2><p>{data.finalTestComplete ? "Return to the route whenever you need to choose the next honest action." : "Ten scenario choices. One question: can you use the whole course when life does not give you a script?"}</p></div><ChevronRight aria-hidden="true" /></button></section> : phases.map((phase, phaseIndex) => {
+          const start = phaseIndex * 10 + 1;
+          const count = phaseCompleteCount(data, start);
+          const complete = count === 10;
+          const active = phase.id === activeIslandId && !complete;
+          const visible = phase.id <= activeIslandId || complete || fullRouteComplete;
+          return <article className={cn("island-card", `island-${phase.id}`, active && "active", complete && "complete", !visible && "mist")} key={phase.id}>
+            <div className="island-art" style={{ backgroundImage: `linear-gradient(90deg, rgba(10,33,42,.68), rgba(10,33,42,.05)), url(${ISLAND_IMAGES[phase.id]})` }}>
+              <div className="island-art-label"><span>{String(phase.id).padStart(2, "0")}</span><small>{phase.range}</small></div>
+              <div className="island-identity"><p>{phase.landscape}</p><h2>{phase.island}</h2><span>{phase.landmark}</span></div>
+              <div className="island-progress"><span>{count}/10</span><i style={{ width: `${count * 10}%` }} /></div>
+            </div>
+            <div className="island-route"><div className="route-copy"><span className="eyebrow">{phase.title}</span><p>{phase.memoryCue}</p></div><div className="island-waypoints" aria-label={`${phase.island} lesson waypoints`}>{Array.from({ length: 10 }, (_, index) => { const day = start + index; const done = data.completedDays.includes(day); const current = day === data.currentDay && !done; const unlocked = day <= data.currentDay || done; const className = cn("island-waypoint", done && "done", current && "current", !unlocked && "locked"); const label = `Day ${day}: ${getLesson(day).title}${done ? ", complete" : current ? ", current" : !unlocked ? ", locked" : ""}`; return unlocked ? <button key={day} className={className} onClick={() => onOpen(day)} aria-label={label}><span>{done ? <Check aria-hidden="true" /> : String(day).padStart(2, "0")}</span>{current && <small>{getLesson(day).title}</small>}</button> : <span key={day} className={className} aria-label={label}><span><Lock aria-hidden="true" /></span></span>; })}</div></div>
+            {complete && phase.id < 10 && <div className="island-passage"><span>Passage charted</span><ChevronRight aria-hidden="true" /></div>}
+          </article>;
+        })}
+      </section>
+    </div>
+  );
+}
+
+function IslandTravelTransition({ transition, onSkip }: { transition: TravelTransition; onSkip: () => void }) {
+  return <aside className="island-travel" role="status" aria-live="polite"><div className="travel-card"><div className="travel-place" style={{ backgroundImage: `url(${ISLAND_IMAGES[transition.from.id]})` }}><span>{transition.from.island}</span></div><div className="travel-line"><Footprints aria-hidden="true" /><span>Passage charted</span></div><div className="travel-place arrival" style={{ backgroundImage: `url(${ISLAND_IMAGES[transition.to.id]})` }}><span>{transition.to.island}</span></div><button onClick={onSkip}>Continue</button></div></aside>;
+}
+
+function FinalTestView({ data, answers, setAnswers, status, onSubmit, onBack }: { data: AppData; answers: Record<number, number>; setAnswers: React.Dispatch<React.SetStateAction<Record<number, number>>>; status: "idle" | "failed" | "passed"; onSubmit: () => void; onBack: () => void }) {
+  return <div className="final-test-shell"><section className="final-test-hero" style={{ backgroundImage: `linear-gradient(90deg, rgba(10,28,38,.83), rgba(10,28,38,.22)), url(${ISLAND_IMAGES[10]})` }}><button className="back-button light" onClick={onBack}><ArrowLeft aria-hidden="true" /> Back to the world</button><span className="eyebrow-light">THE CONNECTED WORLD</span><h1>The Final<br /><em>Test.</em></h1><p>This is not a memory exam. It asks whether you can choose a useful next action when life is more complicated than a lesson.</p><div className="final-progress"><span>{data.finalTestComplete ? "COMPLETE" : `${Object.keys(answers).length} / ${finalQuestions.length} SCENARIOS`}</span><i style={{ width: `${data.finalTestComplete ? 100 : (Object.keys(answers).length / finalQuestions.length) * 100}%` }} /></div></section><section className="final-questions">{data.finalTestComplete ? <div className="final-complete"><div className="summit-mark">✦</div><span className="eyebrow">ROUTE INTEGRATED</span><h2>The map is one world now.</h2><p>You completed the course and demonstrated sound judgment across its ten regions. Keep the route open: notice, choose, act, reflect, return.</p><button className="primary-button" onClick={onBack}>Return to the connected world <ChevronRight aria-hidden="true" /></button></div> : <>{finalQuestions.map((question, questionIndex) => <fieldset className="final-question" key={question.prompt}><legend><span>{String(questionIndex + 1).padStart(2, "0")}</span><small>{question.cue}</small>{question.prompt}</legend><div>{question.options.map((option, optionIndex) => <label key={option} className={cn("final-answer", answers[questionIndex] === optionIndex && "selected", status === "failed" && answers[questionIndex] === optionIndex && optionIndex !== question.answer && "incorrect")}><input type="radio" name={`final-question-${questionIndex}`} checked={answers[questionIndex] === optionIndex} onChange={() => setAnswers((previous) => ({ ...previous, [questionIndex]: optionIndex }))} /><span>{String.fromCharCode(65 + optionIndex)}</span><p>{option}</p></label>)}</div>{status === "failed" && answers[questionIndex] !== undefined && answers[questionIndex] !== question.answer && <p className="final-feedback">Return to the {question.cue} principle, then choose again.</p>}</fieldset>)}<button className="primary-button final-submit" onClick={onSubmit}>Complete the Final Test <ChevronRight aria-hidden="true" /></button></>}</section></div>;
+}
+
+function AchievementsView({ achievements, data }: { achievements: ReturnType<typeof achievementList>; data: AppData }) {
+  const earned = achievements.filter((achievement) => achievement.unlocked).length;
+  return (
+    <div className="view-stack">
+      <section className="achievement-hero">
+        <div><span className="eyebrow-light">MILESTONES, NOT A SCORECARD</span><h1>Notice the<br /><em>real work.</em></h1><p>Achievements mark meaningful learning and follow-through. They do not measure your worth.</p></div>
+        <div className="badge-orbit"><img src={BADGE_URL} alt="" /><span>{earned}<small> / {achievements.length}</small></span></div>
+      </section>
+      <section className="achievement-grid" aria-label="Achievements">
+        {achievements.map((achievement) => {
+          const Icon = achievement.icon;
+          return <article key={achievement.id} className={cn("achievement-card", achievement.unlocked && "earned")}><div className="achievement-icon"><Icon aria-hidden="true" /></div><div><span>{achievement.unlocked ? "EARNED" : "LOCKED"}</span><h2>{achievement.title}</h2><p>{achievement.detail}</p></div>{achievement.unlocked && <Check className="earned-check" aria-label="Earned" />}</article>;
+        })}
+      </section>
+      <aside className="field-note-wide"><span>FIELD NOTE</span><p>“A kept small promise is stronger than an impressive broken one.”</p><i>Current accuracy: {calculateAccuracy(data)}%</i></aside>
+    </div>
+  );
+}
+
+function ProgressView({ data, coursePercent, accuracy }: { data: AppData; coursePercent: number; accuracy: number }) {
+  const stats = [
+    { label: "Steps travelled", value: `${data.completedDays.length}`, sub: "of 100 days", icon: Footprints, tone: "moss" },
+    { label: "Understanding", value: `${accuracy}%`, sub: "quiz accuracy", icon: BookOpen, tone: "sky" },
+    { label: "Actions named", value: `${Object.keys(data.actions).length}`, sub: "real-life steps", icon: Target, tone: "clay" },
+    { label: "Hard bonuses", value: `${data.bonusDays.length}`, sub: "optional challenges", icon: Sparkles, tone: "gold" },
+  ];
+  return (
+    <div className="view-stack">
+      <section className="view-heading progress-title"><div><span className="eyebrow">YOUR FIELD RECORD</span><h1>Progress that<br /><em>means something.</em></h1><p>The important number is not XP. It is how often learning became a useful action.</p></div><div className="course-ring" style={{ "--progress": `${coursePercent * 3.6}deg` } as React.CSSProperties}><strong>{coursePercent}%</strong><span>course</span></div></section>
+      <section className="stat-grid">{stats.map(({ label, value, sub, icon: Icon, tone }) => <article className="stat-card" key={label}><div className={cn("mini-icon", tone)}><Icon aria-hidden="true" /></div><p>{label}</p><h2>{value}</h2><span>{sub}</span></article>)}</section>
+      <section className="paper-card phase-progress-card"><div className="card-heading"><div><span className="eyebrow">TEN PHASES</span><h2>Your route through the course</h2></div><span className="route-small-label">{data.completedDays.length}/100</span></div><div className="phase-bars">{phases.map((phase, index) => { const count = phaseCompleteCount(data, index * 10 + 1); return <div className="phase-bar-row" key={phase.id}><div><span className={cn("phase-dot", phase.color)} /><p>{phase.shortTitle}</p></div><div className="phase-progress-track"><span className={cn("phase-progress-fill", phase.color)} style={{ width: `${count * 10}%` }} /></div><small>{count}/10</small></div>; })}</div></section>
+      <section className="reflection-card"><div><span className="eyebrow-light">REMEMBER</span><h2>“The route line moves because you moved.”</h2><p>If a day was missed, return to the current waypoint. Your path has not disappeared.</p></div><RotateCcw aria-hidden="true" /></section>
+    </div>
+  );
+}
+
+function TakeawaysView({ data, onStart }: { data: AppData; onStart: () => void }) {
+  const items = Object.entries(data.takeaways).sort(([a], [b]) => Number(b) - Number(a));
+  return (
+    <div className="view-stack">
+      <section className="view-heading"><div><span className="eyebrow">YOUR OWN WORDS</span><h1>Things worth<br /><em>carrying forward.</em></h1><p>Short reflections are not proof of learning. They are a place to keep what you want to remember.</p></div></section>
+      {items.length ? <section className="takeaway-list">{items.map(([day, takeaway]) => <article className="takeaway-card" key={day}><div className="takeaway-day">{String(day).padStart(2, "0")}</div><div><span>{getLesson(Number(day)).title}</span><p>“{takeaway}”</p></div></article>)}</section> : <section className="empty-paper"><PencilLine aria-hidden="true" /><h2>Your margin notes will gather here.</h2><p>After you pass a lesson’s quiz, you can write one short thing you want to remember.</p><button className="primary-button" onClick={onStart}>Begin today’s lesson <ChevronRight aria-hidden="true" /></button></section>}
+    </div>
+  );
+}
+
+function LessonView({ lesson, stage, answers, setAnswers, quizStatus, onTakeQuiz, onSubmitQuiz, actionText, setActionText, takeawayText, setTakeawayText, bonusDone, setBonusDone, bonusNote, setBonusNote, completed, celebration, onFinish, onBack, onNext }: {
+  lesson: Lesson; stage: LessonStage; answers: Record<number, number>; setAnswers: React.Dispatch<React.SetStateAction<Record<number, number>>>; quizStatus: "idle" | "failed" | "passed"; onTakeQuiz: () => void; onSubmitQuiz: () => void; actionText: string; setActionText: (value: string) => void; takeawayText: string; setTakeawayText: (value: string) => void; bonusDone: boolean; setBonusDone: (value: boolean) => void; bonusNote: string; setBonusNote: (value: string) => void; completed: boolean; celebration: string[]; onFinish: () => void; onBack: () => void; onNext: () => void;
+}) {
+  const quizOpen = stage === "quiz" || stage === "action" || stage === "complete";
+  const actionOpen = stage === "action" || stage === "complete";
+  return (
+    <div className="lesson-shell">
+      <div className="lesson-topline"><button className="back-button" onClick={onBack}><ArrowLeft aria-hidden="true" /> Back to today</button><span>DAY {String(lesson.day).padStart(2, "0")} / 100</span></div>
+      <section className="lesson-header"><div><p className="eyebrow">{lesson.phase.shortTitle.toUpperCase()} · {lesson.phase.range.toUpperCase()}</p><h1>{lesson.title}</h1><p>{lesson.why}</p></div><div className="lesson-waypoint"><span>{String(lesson.day).padStart(2, "0")}</span><i /></div></section>
+      <div className="lesson-layout">
+        <article className="lesson-page">
+          <section className="lesson-section"><span className="section-index">01</span><div><p className="section-label">THE LESSON</p><p className="lesson-body">{lesson.lesson}</p></div></section>
+          <section className="key-idea-block"><span className="section-label">KEY IDEA</span><p>{lesson.keyIdea}</p></section>
+          <section className="lesson-section example-section"><span className="section-index">02</span><div><p className="section-label">IN REAL LIFE</p><p className="lesson-body">{lesson.example}</p></div></section>
+          {stage === "read" && <section className="understood-card"><div><span className="eyebrow">READY TO CONTINUE?</span><h2>You’ve learned it.<br />Now prove it.</h2><p>The quiz checks understanding before the day’s action unlocks.</p></div><button className="primary-button" onClick={onTakeQuiz}>Understood — take the quiz <ChevronRight aria-hidden="true" /></button></section>}
+
+          {quizOpen && <section className="quiz-area" aria-labelledby="quiz-heading"><div className="quiz-heading"><div><span className="eyebrow">KNOWLEDGE CHECK · +10 XP</span><h2 id="quiz-heading">You’ve learned it. Now prove it.</h2></div>{stage !== "quiz" && <span className="passed-tag"><Check aria-hidden="true" /> Passed</span>}</div>
+            {stage === "quiz" && <div className="quiz-list">{lesson.quiz.map((question, questionIndex) => <fieldset className={cn("quiz-card", quizStatus === "failed" && answers[questionIndex] !== question.answer && "incorrect")} key={question.question}><legend><span>{String(questionIndex + 1).padStart(2, "0")}</span>{question.question}</legend><div>{question.options.map((option, optionIndex) => <label className={cn("answer-option", answers[questionIndex] === optionIndex && "selected")} key={option}><input type="radio" name={`question-${questionIndex}`} checked={answers[questionIndex] === optionIndex} onChange={() => setAnswers((current) => ({ ...current, [questionIndex]: optionIndex }))} /><span>{String.fromCharCode(65 + optionIndex)}</span><p>{option}</p></label>)}</div>{quizStatus === "failed" && answers[questionIndex] !== question.answer && <p className="answer-help"><X aria-hidden="true" /> {question.explanation}</p>}</fieldset>)}</div>}
+            {stage === "quiz" && <button className="primary-button quiz-submit" onClick={onSubmitQuiz}>Check my understanding <ChevronRight aria-hidden="true" /></button>}
+          </section>}
+
+          {actionOpen && <section className="action-area" aria-labelledby="action-heading"><div className="action-heading"><div className="action-icon"><Target aria-hidden="true" /></div><div><span className="eyebrow">TODAY’S ACTION · +20 XP</span><h2 id="action-heading">Now use it.</h2></div></div><p className="action-prompt">{lesson.actionPrompt}</p><p className="action-hint">{lesson.actionHint}</p>{!completed ? <textarea value={actionText} onChange={(event) => setActionText(event.target.value.slice(0, 300))} placeholder="Write the small action you will actually take…" aria-label="Today’s action" maxLength={300} /> : <div className="saved-note"><Check aria-hidden="true" /><p>{actionText}</p></div>}
+            <div className="takeaway-row"><label htmlFor="takeaway"><span>OPTIONAL MARGIN NOTE</span><small>What will you remember?</small></label>{!completed ? <textarea id="takeaway" value={takeawayText} onChange={(event) => setTakeawayText(event.target.value.slice(0, 300))} placeholder="One sentence in your own words…" maxLength={300} /> : takeawayText ? <div className="saved-takeaway">“{takeawayText}”</div> : <p className="empty-note">No margin note recorded for this step.</p>}</div>
+          </section>}
+
+          {actionOpen && <section className="bonus-area"><div><span className="eyebrow">OPTIONAL HARD BONUS · +60 XP</span><h2>Push the idea into real life.</h2><p>{lesson.bonus}</p></div>{!completed ? <label className="bonus-toggle"><input type="checkbox" checked={bonusDone} onChange={(event) => setBonusDone(event.target.checked)} /><span><Check aria-hidden="true" /></span>I completed the hard bonus</label> : bonusDone ? <span className="bonus-earned"><Sparkles aria-hidden="true" /> Hard bonus recorded</span> : <span className="bonus-skip">Bonus skipped — the core day still counts.</span>}{bonusDone && !completed && <textarea value={bonusNote} onChange={(event) => setBonusNote(event.target.value.slice(0, 180))} placeholder="How did you apply the challenge?" aria-label="Hard bonus reflection" maxLength={180} />}</section>}
+          {actionOpen && !completed && <button className="complete-button" onClick={onFinish}><span><Check aria-hidden="true" /></span> Complete Day {lesson.day}<small>Quiz + action required</small></button>}
+          {completed && <section className="completion-card"><div className="completion-stamp"><Check aria-hidden="true" /></div><div><span className="eyebrow">DAY RECORDED</span><h2>{lesson.day === 100 ? "100 days complete. Your practice continues." : "One honest step travelled."}</h2><p>{lesson.day === 100 ? "Keep the method: learn, prove, act, reflect, and return." : "The reward is not the points—it is the part you carry into your real life."}</p>{celebration.map((item) => <span className="unlocked-line" key={item}><Award aria-hidden="true" /> Achievement unlocked: {item}</span>)}</div><button className="primary-button" onClick={onNext}>{lesson.day === 100 ? "Return to your field guide" : "Continue the journey"}<ChevronRight aria-hidden="true" /></button></section>}
+        </article>
+        <aside className="lesson-margin"><div className="margin-progress"><span>DAY {String(lesson.day).padStart(2, "0")}</span><div><i style={{ height: `${Math.max(8, lesson.day)}%` }} /></div><span>100</span></div><div className="margin-note"><span>REMEMBER</span><p>Learning only matters when it changes how you live.</p></div><div className="xp-note"><Zap aria-hidden="true" /><span><strong>+{lesson.quiz.length ? 10 : 0} XP</strong> for understanding<br /><strong>+20 XP</strong> for action</span></div></aside>
+      </div>
+    </div>
+  );
+}
