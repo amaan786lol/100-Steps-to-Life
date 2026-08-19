@@ -16,6 +16,10 @@ Every lesson follows the same sequence:
 
 A day cannot be completed by typing a reflection or pressing a button. The learner first passes a knowledge check, then records the real-world action they will take. Reflection helps carry the learning forward but is not treated as proof on its own.
 
+The check is not a formality. It runs one question at a time and grows with the course — ten questions on the first island, rising to fifteen on the Summit — and roughly seven in ten must be right to pass. Questions are built from each lesson's own wording, with the wrong options drawn from other lessons so they are plausible enough to need real discrimination, and correct answers are shuffled so position never gives the game away. Failing is not a dead end: the review screen shows each missed question with its answer and the reasoning behind it, then offers the check again.
+
+At the end of every island a **recheck** draws eight questions from across its ten days. Passing it is what opens the passage to the next island, so moving on takes the whole stretch rather than the most recent lesson.
+
 ## The island world
 
 The 100 days are grouped into ten phases, each with its own island — a memory environment with one landmark, one emotional tone, and one recurring cue, all sharing a single route grammar so no new map has to be decoded.
@@ -56,16 +60,17 @@ Three persistent appearance modes — Morning, Night, and Green — recolour the
 
 ```
 client/          React SPA
-  src/data/      the 100-day course content and its type definitions
+  src/data/      the 100-day course content, quiz generation and rechecks
   src/pages/     Home, ComponentShowcase, NotFound
   src/components/ Map, DashboardLayout, AIChatBox, ui/ (shadcn)
-  public/        PWA manifest and service worker
+  public/        PWA manifest, service worker
+  public/media/  island art, brand marks, app icons and graphics
 server/          Express + tRPC API
   routers.ts     auth and progress procedures
   _core/         platform integration (OAuth, storage, LLM, vite middleware)
 drizzle/         schema, relations and migrations
 shared/          types and constants used by both sides
-scripts/         island SVG and PWA icon generators
+scripts/         island SVG and PWA icon generators, standalone bundler
 research/        sourcing notes for quotations and PWA verification
 ```
 
@@ -86,9 +91,26 @@ Other scripts:
 | `pnpm test` | Run the Vitest suite |
 | `pnpm check` | Typecheck with `tsc --noEmit` |
 | `pnpm build` | Build the client and bundle the server to `dist/` |
+| `pnpm build:standalone` | Fold the built client into one self-contained HTML file |
 | `pnpm start` | Serve the production build |
 | `pnpm format` | Format with Prettier |
 | `pnpm db:push` | Generate and apply Drizzle migrations |
+
+## Running it as a single file
+
+The course is local-first, so the client alone is the whole experience. After a
+normal build:
+
+```bash
+pnpm build && pnpm build:standalone
+```
+
+`dist/hundred-steps-standalone.html` is one self-contained page — stylesheet,
+script bundle and all eighteen images inlined — that runs from a `file://` URL
+or any static host with no server and no network. Sign-in and journal backup
+are inert there; everything else, including all hundred days, works. Add
+`--artifact` to emit page contents only, for hosts that supply their own
+document skeleton.
 
 ## Configuration
 

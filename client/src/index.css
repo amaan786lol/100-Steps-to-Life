@@ -278,6 +278,68 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .answer-option.selected > span { border-color: var(--moss); background: var(--moss); color: white; }
 .answer-option p { margin: 0; color: var(--ink-soft); font-size: 12px; font-weight: 700; line-height: 1.4; }
 .answer-help { display: flex; align-items: flex-start; gap: 5px; margin: 7px 0 0; color: #9e4a38; font-size: 11px; font-weight: 700; line-height: 1.5; }
+
+/* --- Paginated knowledge check ----------------------------------------- */
+.quiz-runner { display: grid; gap: 15px; }
+
+/* Progress reads as a route: travelled pips fill, the current one glows. */
+.quiz-track { display: flex; align-items: center; gap: 5px; }
+.quiz-pip { position: relative; display: block; flex: 1; height: 4px; border-radius: 3px; background: var(--line); transition: background-color 260ms var(--ease-out), transform 260ms var(--ease-out); }
+.quiz-pip.done { background: var(--moss); }
+.quiz-pip.current { background: var(--gold); transform: scaleY(2.1); }
+.quiz-counter { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; font-variant-numeric: tabular-nums; }
+
+.quiz-question { margin: 0; padding: 0; border: 0; animation: question-in 340ms var(--ease-out) both; }
+.quiz-question legend { display: block; width: 100%; padding: 0; color: var(--ink); font: 600 21px/1.3 "Fraunces", Georgia, serif; text-wrap: balance; }
+.quiz-options { display: grid; gap: 8px; margin-top: 15px; }
+.quiz-options .answer-option { animation: option-in 300ms var(--ease-out) both; cursor: pointer; }
+.quiz-options .answer-option:active { transform: scale(.988); }
+.quiz-options .answer-option:has(input:focus-visible) { outline: 2px solid var(--moss); outline-offset: 2px; }
+
+.quiz-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 2px; }
+.quiz-step { display: inline-flex; align-items: center; gap: 5px; padding: 10px 13px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); color: var(--ink); font-size: 12px; font-weight: 800; transition: border-color 150ms var(--ease-out), transform 150ms var(--ease-out); }
+.quiz-step:hover:not(:disabled) { border-color: var(--moss); transform: translateY(-1px); }
+.quiz-step:disabled { opacity: .38; }
+.quiz-step svg { width: 15px; height: 15px; }
+.quiz-controls .primary-button:disabled { opacity: .55; }
+
+/* --- Review after a failed check ---------------------------------------- */
+.quiz-review { display: grid; gap: 15px; animation: question-in 340ms var(--ease-out) both; }
+.quiz-review-head h3 { margin: 7px 0 6px; color: var(--ink); font: 600 24px/1.1 "Fraunces", Georgia, serif; }
+.quiz-review-head p { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.6; }
+.quiz-review-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.quiz-review-list li { padding: 14px; border: 1px solid var(--line); border-left: 3px solid var(--clay); border-radius: 11px; background: var(--parchment); animation: review-in 380ms var(--ease-out) both; }
+.review-question { margin: 0 0 8px; color: var(--ink); font: 600 14px/1.35 "Fraunces", Georgia, serif; }
+.review-answer { display: flex; align-items: flex-start; gap: 6px; margin: 0 0 6px; color: var(--moss-dark); font-size: 12.5px; font-weight: 800; line-height: 1.45; }
+.review-answer svg { flex: none; width: 15px; height: 15px; margin-top: 1px; }
+.review-why { margin: 0; color: var(--ink-soft); font-size: 12px; line-height: 1.55; }
+
+/* --- Island recheck ------------------------------------------------------ */
+.recheck-shell { display: grid; gap: 18px; animation: view-in 380ms var(--ease-out) both; }
+.recheck-hero { min-height: 300px; padding: 22px; border: 1px solid var(--line); border-radius: 18px; background-position: center; background-size: cover; box-shadow: var(--shadow); color: white; }
+.recheck-hero h1 { margin: 9px 0 11px; color: white; font-size: clamp(40px, 11vw, 66px); font-weight: 600; letter-spacing: -.045em; line-height: .86; }
+.recheck-hero h1 em { color: #e5c878; font-style: normal; }
+.recheck-hero > p { max-width: 470px; margin: 0; color: rgba(255,255,255,.8); font-size: 13px; line-height: 1.6; }
+.recheck-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+.recheck-meta span { display: inline-flex; align-items: center; gap: 6px; padding: 7px 11px; border: 1px solid rgba(255,255,255,.32); border-radius: 999px; background: rgba(6,20,28,.34); color: rgba(255,255,255,.9); font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.recheck-meta svg { width: 14px; height: 14px; color: #e5c878; }
+.recheck-body { padding: 21px 19px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); box-shadow: var(--shadow-soft); }
+.recheck-complete { padding: 22px 4px; text-align: center; }
+.recheck-complete h2 { margin: 8px 0 9px; color: var(--ink); font: 600 33px/1 "Fraunces", Georgia, serif; }
+.recheck-complete p { max-width: 430px; margin: 0 auto 20px; color: var(--ink-soft); font-size: 13px; line-height: 1.6; }
+.recheck-seal { display: grid; place-items: center; width: 62px; height: 62px; margin: 0 auto 14px; border-radius: 50%; background: var(--moss); color: white; box-shadow: 0 0 0 0 color-mix(in srgb, var(--moss) 45%, transparent); animation: seal-in 620ms var(--ease-out) both, seal-ring 1900ms 620ms var(--ease-out) 2; }
+.recheck-seal svg { width: 28px; height: 28px; }
+@media (min-width: 620px) { .recheck-hero { padding: 32px; min-height: 330px; } .recheck-body { padding: 28px; } }
+
+@keyframes question-in { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
+@keyframes option-in { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+@keyframes review-in { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+@keyframes view-in { from { opacity: 0; transform: translateY(11px); } to { opacity: 1; transform: none; } }
+@keyframes seal-in { 0% { opacity: 0; transform: scale(.4) rotate(-22deg); } 60% { opacity: 1; transform: scale(1.12) rotate(4deg); } 100% { opacity: 1; transform: none; } }
+@keyframes seal-ring { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--moss) 45%, transparent); } 100% { box-shadow: 0 0 0 22px transparent; } }
+
+.theme-night .quiz-step { background: #10222c; }
+.theme-night .quiz-review-list li { background: #102a34; }
 .answer-help svg { width: 14px; flex: 0 0 auto; margin-top: 1px; }
 .quiz-submit { width: 100%; margin-top: 20px; }
 .action-area { padding: 23px 20px; border-top: 1px solid var(--line); }
@@ -421,6 +483,16 @@ textarea:focus { border-color: var(--moss); box-shadow: 0 0 0 3px rgba(53, 106, 
 @media (prefers-reduced-motion: reduce) {
   .theme-night .cove-stars, .theme-morning .cove-clouds { animation: none; }
   .theme-night .cove-stars { opacity: .88; }
+  /* Entrances and emphasis become instant, but nothing disappears: every
+     animated element is left at its finished state. */
+  .quiz-question, .quiz-options .answer-option, .quiz-review, .quiz-review-list li,
+  .recheck-shell, .recheck-seal, .celebration-note, .stat-pop {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .quiz-pip { transition: background-color 1ms linear; }
+  .quiz-pip.current { transform: none; }
 }
 
 .course-method { display: grid; gap: 22px; padding: 4px 0 0; }.method-rules { display: grid; gap: 1px; border: 1px solid var(--line); background: var(--line); }.method-rules article { min-height: 147px; padding: 18px; background: var(--paper); }.method-rules span { color: var(--moss); font-size: 10px; font-weight: 800; letter-spacing: .1em; }.method-rules h3 { margin: 21px 0 7px; color: var(--ink); font-size: 24px; font-weight: 600; }.method-rules p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }.method-boundary { display: flex; align-items: flex-start; gap: 10px; padding: 15px 0 3px; border-top: 1px dashed var(--line); color: var(--muted); }.method-boundary svg { flex: 0 0 auto; width: 19px; height: 19px; color: var(--gold); }.method-boundary p { max-width: 780px; margin: 0; font-size: 11px; line-height: 1.65; }

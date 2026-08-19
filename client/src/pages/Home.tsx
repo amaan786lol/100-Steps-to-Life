@@ -39,7 +39,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { getLesson, lessons, phases, type CoursePhase, type Lesson } from "../data/course";
+import { RECHECK_LENGTH, buildRecheck, getLesson, lessons, passMark, phases, type CoursePhase, type Lesson, type QuizQuestion } from "../data/course";
 
 const STORAGE_KEY = "hundred-steps-to-life-v1";
 const THEME_STORAGE_KEY = "hundred-steps-to-life-theme";
@@ -62,7 +62,7 @@ const ISLAND_IMAGES: Record<number, string> = {
   10: "/media/island-summit.svg",
 };
 
-type View = "today" | "map" | "achievements" | "progress" | "takeaways" | "lesson" | "final";
+type View = "today" | "map" | "achievements" | "progress" | "takeaways" | "lesson" | "recheck" | "final";
 type LessonStage = "read" | "quiz" | "action" | "complete";
 type QuizResult = { score: number; passed: boolean; perfect: boolean };
 type Theme = "morning" | "night" | "green";
@@ -88,6 +88,8 @@ type AppData = {
   actions: Record<number, string>;
   takeaways: Record<number, string>;
   bonusDays: number[];
+  /** Island rechecks passed, keyed by phase id. */
+  rechecks: Record<number, { score: number; passed: boolean }>;
   finalTestComplete: boolean;
 };
 
@@ -100,6 +102,7 @@ const defaultData: AppData = {
   actions: {},
   takeaways: {},
   bonusDays: [],
+  rechecks: {},
   finalTestComplete: false,
 };
 
@@ -130,11 +133,62 @@ const clampDay = (day: number) => Math.min(100, Math.max(1, day));
 const phaseCompleteCount = (data: AppData, start: number) =>
   data.completedDays.filter((day) => day >= start && day < start + 10).length;
 
-function calculateAccuracy(data: AppData) {
-  const results = Object.values(data.quizHistory);
-  if (!results.length) return 0;
-  const correct = results.reduce((total, result) => total + result.score, 0);
-  return Math.round((correct / (results.length * 3)) * 100);
+const phaseIdForDay = (day: number) => Math.floor((day - 1) / 10) + 1;
+
+/** An island is travelled once all ten of its days are recorded. */
+export const islandTravelled = (data: AppData, phaseId: number) =>
+  phaseCompleteCount(data, (phaseId - 1) * 10 + 1) === 10;
+
+export const recheckPassed = (data: AppData, phaseId: number) => Boolean(data.rechecks?.[phaseId]?.passed);
+
+/** The recheck standing between the learner and the rest of the route, if any. */
+export const dueRecheck = (data: AppData, forDay: number) => {
+  const target = phaseIdForDay(forDay);
+  return phases.find((phase) => phase.id < target && islandTravelled(data, phase.id) && !recheckPassed(data, phase.id));
+};
+
+export function calculateAccuracy(data: AppData) {
+  const entries = Object.entries(data.quizHistory);
+  if (!entries.length) return 0;
+  // Ask each lesson how many questions it holds rather than assuming a fixed
+  // number, so a lesson with a longer or shorter quiz still scores correctly.
+  const asked = entries.reduce((total, [day]) => total + getLesson(Number(day)).quiz.length, 0);
+  if (!asked) return 0;
+  const correct = entries.reduce((total, [, result]) => total + result.score, 0);
+  return Math.round((correct / asked) * 100);
+}
+
+/**
+ * Record a completed day. Pure so that the streak, XP and bonus rules can be
+ * tested directly, and so the React state updater stays free of side effects.
+ * Returns the journal unchanged when the day is already complete.
+ */
+export function completeDay(
+  previous: AppData,
+  input: { day: number; action: string; takeaway: string; bonus: boolean; now?: Date },
+): AppData {
+  if (previous.completedDays.includes(input.day)) return previous;
+  const now = input.now ?? new Date();
+  const last = previous.lastCompletionDate ? new Date(previous.lastCompletionDate) : undefined;
+  const nextStreak = !last || !sameDay(last, now) ? (last && yesterday(last) ? previous.streak + 1 : 1) : previous.streak;
+  const receivedBonus = input.bonus && !previous.bonusDays.includes(input.day);
+  return {
+    ...previous,
+    currentDay: input.day === previous.currentDay ? clampDay(previous.currentDay + 1) : previous.currentDay,
+    completedDays: [...previous.completedDays, input.day].sort((a, b) => a - b),
+    xp: previous.xp + 20 + (receivedBonus ? 60 : 0),
+    streak: nextStreak,
+    lastCompletionDate: now.toISOString(),
+    actions: { ...previous.actions, [input.day]: input.action },
+    takeaways: input.takeaway ? { ...previous.takeaways, [input.day]: input.takeaway } : previous.takeaways,
+    bonusDays: receivedBonus ? [...previous.bonusDays, input.day] : previous.bonusDays,
+  };
+}
+
+/** Titles of achievements unlocked by moving from one journal state to the next. */
+export function newlyUnlocked(previous: AppData, next: AppData) {
+  const before = new Set(achievementList(previous).filter((achievement) => achievement.unlocked).map((achievement) => achievement.id));
+  return achievementList(next).filter((achievement) => achievement.unlocked && !before.has(achievement.id)).map((achievement) => achievement.title);
 }
 
 function achievementList(data: AppData) {
@@ -166,6 +220,9 @@ export default function Home() {
   const [stage, setStage] = useState<LessonStage>("read");
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [quizStatus, setQuizStatus] = useState<"idle" | "failed" | "passed">("idle");
+  const [recheckPhaseId, setRecheckPhaseId] = useState<number | null>(null);
+  const [recheckAnswers, setRecheckAnswers] = useState<Record<number, number>>({});
+  const [recheckStatus, setRecheckStatus] = useState<"idle" | "failed" | "passed">("idle");
   const [actionText, setActionText] = useState("");
   const [takeawayText, setTakeawayText] = useState("");
   const [bonusDone, setBonusDone] = useState(false);
@@ -228,6 +285,12 @@ export default function Home() {
   }
 
   function openLesson(day: number) {
+    const blocking = dueRecheck(data, day);
+    if (blocking) {
+      setNotice(`${blocking.island} has a recheck waiting. Pass it and the route opens onward.`);
+      openRecheck(blocking.id);
+      return;
+    }
     if (!canOpenDay(day)) {
       setNotice("This waypoint unlocks after you complete the current day. Take one real step first.");
       return;
@@ -245,6 +308,34 @@ export default function Home() {
     setView("lesson");
   }
 
+  function openRecheck(phaseId: number) {
+    setRecheckPhaseId(phaseId);
+    setRecheckAnswers({});
+    setRecheckStatus(recheckPassed(data, phaseId) ? "passed" : "idle");
+    setMenuOpen(false);
+    setView("recheck");
+  }
+
+  function submitRecheck() {
+    if (recheckPhaseId === null) return;
+    const questions = buildRecheck(recheckPhaseId);
+    const score = questions.reduce((total, question, index) => total + (recheckAnswers[index] === question.answer ? 1 : 0), 0);
+    if (score < passMark(questions.length)) {
+      setRecheckStatus("failed");
+      setNotice("Not yet. Look again at what this island was teaching, then run the recheck.");
+      return;
+    }
+    setRecheckStatus("passed");
+    setNotice("");
+    if (!recheckPassed(data, recheckPhaseId)) {
+      setData({ ...data, xp: data.xp + 40, rechecks: { ...data.rechecks, [recheckPhaseId]: { score, passed: true } } });
+    }
+    if (recheckPhaseId < 10) {
+      setTravelTransition({ from: phases[recheckPhaseId - 1], to: phases[recheckPhaseId] });
+      window.setTimeout(() => setTravelTransition(null), 1800);
+    }
+  }
+
   function startToday() {
     openLesson(data.currentDay);
   }
@@ -256,7 +347,7 @@ export default function Home() {
       return;
     }
     const score = lesson.quiz.reduce((total, question, index) => total + (answers[index] === question.answer ? 1 : 0), 0);
-    const passed = score >= 2;
+    const passed = score >= passMark(lesson.quiz.length);
     const perfect = score === lesson.quiz.length;
     if (!passed) {
       setQuizStatus("failed");
@@ -286,36 +377,20 @@ export default function Home() {
       return;
     }
 
-    setData((previous) => {
-      if (previous.completedDays.includes(lesson.day)) return previous;
-      const now = new Date();
-      const last = previous.lastCompletionDate ? new Date(previous.lastCompletionDate) : undefined;
-      const nextStreak = !last || !sameDay(last, now) ? (last && yesterday(last) ? previous.streak + 1 : 1) : previous.streak;
-      const receivedBonus = bonusDone && !previous.bonusDays.includes(lesson.day);
-      const next: AppData = {
-        ...previous,
-        currentDay: lesson.day === previous.currentDay ? clampDay(previous.currentDay + 1) : previous.currentDay,
-        completedDays: [...previous.completedDays, lesson.day].sort((a, b) => a - b),
-        xp: previous.xp + 20 + (receivedBonus ? 60 : 0),
-        streak: nextStreak,
-        lastCompletionDate: now.toISOString(),
-        actions: { ...previous.actions, [lesson.day]: actionText.trim() },
-        takeaways: takeawayText.trim() ? { ...previous.takeaways, [lesson.day]: takeawayText.trim() } : previous.takeaways,
-        bonusDays: receivedBonus ? [...previous.bonusDays, lesson.day] : previous.bonusDays,
-      };
-      const before = new Set(achievementList(previous).filter((achievement) => achievement.unlocked).map((achievement) => achievement.id));
-      const gained = achievementList(next).filter((achievement) => achievement.unlocked && !before.has(achievement.id)).map((achievement) => achievement.title);
-      setCelebration(gained);
-      return next;
+    const next = completeDay(data, {
+      day: lesson.day,
+      action: actionText.trim(),
+      takeaway: takeawayText.trim(),
+      bonus: bonusDone,
     });
-    if (lesson.day % 10 === 0 && lesson.day < 100 && lesson.day === data.currentDay) {
-      const from = phases[Math.floor((lesson.day - 1) / 10)];
-      const to = phases[Math.floor(lesson.day / 10)];
-      setTravelTransition({ from, to });
-      window.setTimeout(() => setTravelTransition(null), 1800);
+    if (next !== data) {
+      setCelebration(newlyUnlocked(data, next));
+      setData(next);
     }
     setStage("complete");
-    setNotice("Day recorded. What matters is the action you carry into real life.");
+    setNotice(lesson.day % 10 === 0
+      ? "Island complete. One recheck now covers the whole stretch you have just travelled."
+      : "Day recorded. What matters is the action you carry into real life.");
   }
 
   function openFinalTest() {
@@ -436,6 +511,7 @@ export default function Home() {
               quizStatus={quizStatus}
               onTakeQuiz={() => { setStage("quiz"); setNotice(""); }}
               onSubmitQuiz={submitQuiz}
+              onRetryQuiz={() => { setAnswers({}); setQuizStatus("idle"); setNotice(""); }}
               actionText={actionText}
               setActionText={setActionText}
               takeawayText={takeawayText}
@@ -448,7 +524,20 @@ export default function Home() {
               celebration={celebration}
               onFinish={finishDay}
               onBack={() => chooseView("today")}
-              onNext={() => selectedDay === 100 && data.completedDays.includes(100) ? openFinalTest() : selectedDay < data.currentDay ? openLesson(selectedDay + 1) : chooseView("today")}
+              onNext={() => selectedDay % 10 === 0 && islandTravelled(data, phaseIdForDay(selectedDay)) && !recheckPassed(data, phaseIdForDay(selectedDay)) ? openRecheck(phaseIdForDay(selectedDay)) : selectedDay === 100 && data.completedDays.includes(100) ? openFinalTest() : selectedDay < data.currentDay ? openLesson(selectedDay + 1) : chooseView("today")}
+            />
+          )}
+          {view === "recheck" && recheckPhaseId !== null && (
+            <RecheckView
+              phase={phases[recheckPhaseId - 1]}
+              data={data}
+              answers={recheckAnswers}
+              setAnswers={setRecheckAnswers}
+              status={recheckStatus}
+              onSubmit={submitRecheck}
+              onRetry={() => { setRecheckAnswers({}); setRecheckStatus("idle"); setNotice(""); }}
+              onBack={() => chooseView("map")}
+              onContinue={() => { const next = recheckPhaseId * 10 + 1; if (next <= 100) openLesson(next); else chooseView("map"); }}
             />
           )}
           {view === "final" && <FinalTestView data={data} answers={finalAnswers} setAnswers={setFinalAnswers} status={finalStatus} onSubmit={submitFinalTest} onBack={() => chooseView("map")} />}
@@ -695,8 +784,179 @@ function TakeawaysView({ data, onStart }: { data: AppData; onStart: () => void }
   );
 }
 
-function LessonView({ lesson, stage, answers, setAnswers, quizStatus, onTakeQuiz, onSubmitQuiz, actionText, setActionText, takeawayText, setTakeawayText, bonusDone, setBonusDone, bonusNote, setBonusNote, completed, celebration, onFinish, onBack, onNext }: {
-  lesson: Lesson; stage: LessonStage; answers: Record<number, number>; setAnswers: React.Dispatch<React.SetStateAction<Record<number, number>>>; quizStatus: "idle" | "failed" | "passed"; onTakeQuiz: () => void; onSubmitQuiz: () => void; actionText: string; setActionText: (value: string) => void; takeawayText: string; setTakeawayText: (value: string) => void; bonusDone: boolean; setBonusDone: (value: boolean) => void; bonusNote: string; setBonusNote: (value: string) => void; completed: boolean; celebration: string[]; onFinish: () => void; onBack: () => void; onNext: () => void;
+/**
+ * The gate at the end of an island: eight questions drawn across its ten days,
+ * so moving on takes the whole stretch rather than the most recent lesson.
+ */
+function RecheckView({ phase, data, answers, setAnswers, status, onSubmit, onRetry, onBack, onContinue }: {
+  phase: CoursePhase;
+  data: AppData;
+  answers: Record<number, number>;
+  setAnswers: React.Dispatch<React.SetStateAction<Record<number, number>>>;
+  status: "idle" | "failed" | "passed";
+  onSubmit: () => void;
+  onRetry: () => void;
+  onBack: () => void;
+  onContinue: () => void;
+}) {
+  const questions = useMemo(() => buildRecheck(phase.id), [phase.id]);
+  const alreadyPassed = recheckPassed(data, phase.id);
+  const isLastIsland = phase.id === 10;
+
+  return (
+    <div className="recheck-shell">
+      <section className="recheck-hero" style={{ backgroundImage: `linear-gradient(90deg, rgba(10,28,38,.86), rgba(10,28,38,.28)), url(${ISLAND_IMAGES[phase.id]})` }}>
+        <button className="back-button light" onClick={onBack}><ArrowLeft aria-hidden="true" /> Back to the map</button>
+        <span className="eyebrow-light">ISLAND {String(phase.id).padStart(2, "0")} RECHECK · {phase.range.toUpperCase()}</span>
+        <h1>{phase.island}<br /><em>revisited.</em></h1>
+        <p>Ten days are behind you. This recheck draws {RECHECK_LENGTH} questions from across the whole island, not just the last thing you read.</p>
+        <div className="recheck-meta">
+          <span><Mountain aria-hidden="true" /> {phase.landmark}</span>
+          <span><Target aria-hidden="true" /> {passMark(questions.length)} of {questions.length} to pass</span>
+        </div>
+      </section>
+
+      <section className="recheck-body">
+        {status === "passed" || alreadyPassed ? (
+          <div className="recheck-complete">
+            <div className="recheck-seal"><Check aria-hidden="true" /></div>
+            <span className="eyebrow">ISLAND SECURED</span>
+            <h2>{phase.island} holds.</h2>
+            <p>You carried {phase.title.toLowerCase()} across ten days and can still use it. The route runs on.</p>
+            <button className="primary-button" onClick={onContinue}>
+              {isLastIsland ? "Return to the world" : "Travel to the next island"} <ChevronRight aria-hidden="true" />
+            </button>
+          </div>
+        ) : (
+          <QuizRunner
+            questions={questions}
+            answers={answers}
+            setAnswers={setAnswers}
+            status={status}
+            onSubmit={onSubmit}
+            onRetry={onRetry}
+            submitLabel="Complete the recheck"
+          />
+        )}
+      </section>
+    </div>
+  );
+}
+
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+/**
+ * One question at a time, with a route-shaped progress track. Shared by the
+ * daily knowledge check and the island recheck, which differ only in length
+ * and wording.
+ */
+function QuizRunner({ questions, answers, setAnswers, status, onSubmit, onRetry, submitLabel }: {
+  questions: QuizQuestion[];
+  answers: Record<number, number>;
+  setAnswers: React.Dispatch<React.SetStateAction<Record<number, number>>>;
+  status: "idle" | "failed" | "passed";
+  onSubmit: () => void;
+  onRetry: () => void;
+  submitLabel: string;
+}) {
+  const [index, setIndex] = useState(0);
+  const total = questions.length;
+  const question = questions[index];
+  const chosen = answers[index];
+  const answeredCount = questions.filter((_, position) => answers[position] !== undefined).length;
+  const isLast = index === total - 1;
+
+  if (status === "failed") {
+    const missed = questions.map((item, position) => ({ item, position })).filter(({ item, position }) => answers[position] !== item.answer);
+    return (
+      <div className="quiz-review">
+        <div className="quiz-review-head">
+          <span className="eyebrow">REVIEW BEFORE YOU CONTINUE</span>
+          <h3>{missed.length} of {total} need another look.</h3>
+          <p>Understanding comes first. Read what each one was pointing at, then run the check again.</p>
+        </div>
+        <ol className="quiz-review-list">
+          {missed.map(({ item, position }) => (
+            <li key={item.question} style={{ animationDelay: `${Math.min(position, 8) * 45}ms` }}>
+              <p className="review-question">{item.question}</p>
+              <p className="review-answer"><Check aria-hidden="true" /> {item.options[item.answer]}</p>
+              <p className="review-why">{item.explanation}</p>
+            </li>
+          ))}
+        </ol>
+        <button className="primary-button" onClick={() => { onRetry(); setIndex(0); }}>
+          <RotateCcw aria-hidden="true" /> Run the check again
+        </button>
+      </div>
+    );
+  }
+
+  function choose(optionIndex: number) {
+    setAnswers((current) => ({ ...current, [index]: optionIndex }));
+    if (isLast) return;
+    const delay = prefersReducedMotion() ? 0 : 300;
+    window.setTimeout(() => setIndex((current) => (current === index ? Math.min(total - 1, current + 1) : current)), delay);
+  }
+
+  return (
+    <div className="quiz-runner">
+      <div className="quiz-track" aria-hidden="true">
+        {questions.map((item, position) => (
+          <i
+            key={item.question}
+            className={cn("quiz-pip", answers[position] !== undefined && "done", position === index && "current")}
+          />
+        ))}
+      </div>
+      <div className="quiz-counter">
+        <span>Question {String(index + 1).padStart(2, "0")} of {String(total).padStart(2, "0")}</span>
+        <span>{answeredCount} answered</span>
+      </div>
+
+      <fieldset className="quiz-question" key={index}>
+        <legend>{question.question}</legend>
+        <div className="quiz-options">
+          {question.options.map((option, optionIndex) => (
+            <label
+              className={cn("answer-option", chosen === optionIndex && "selected")}
+              key={option}
+              style={{ animationDelay: `${optionIndex * 55}ms` }}
+            >
+              <input
+                type="radio"
+                name={`question-${index}`}
+                checked={chosen === optionIndex}
+                onChange={() => choose(optionIndex)}
+              />
+              <span>{String.fromCharCode(65 + optionIndex)}</span>
+              <p>{option}</p>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <div className="quiz-controls">
+        <button className="quiz-step" onClick={() => setIndex((current) => Math.max(0, current - 1))} disabled={index === 0}>
+          <ArrowLeft aria-hidden="true" /> Back
+        </button>
+        {isLast ? (
+          <button className="primary-button" onClick={onSubmit} disabled={answeredCount < total}>
+            {answeredCount < total ? `${total - answeredCount} still unanswered` : submitLabel}
+            <ChevronRight aria-hidden="true" />
+          </button>
+        ) : (
+          <button className="quiz-step forward" onClick={() => setIndex((current) => Math.min(total - 1, current + 1))}>
+            Next <ChevronRight aria-hidden="true" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function LessonView({ lesson, stage, answers, setAnswers, quizStatus, onTakeQuiz, onSubmitQuiz, onRetryQuiz, actionText, setActionText, takeawayText, setTakeawayText, bonusDone, setBonusDone, bonusNote, setBonusNote, completed, celebration, onFinish, onBack, onNext }: {
+  lesson: Lesson; stage: LessonStage; answers: Record<number, number>; setAnswers: React.Dispatch<React.SetStateAction<Record<number, number>>>; quizStatus: "idle" | "failed" | "passed"; onTakeQuiz: () => void; onSubmitQuiz: () => void; onRetryQuiz: () => void; actionText: string; setActionText: (value: string) => void; takeawayText: string; setTakeawayText: (value: string) => void; bonusDone: boolean; setBonusDone: (value: boolean) => void; bonusNote: string; setBonusNote: (value: string) => void; completed: boolean; celebration: string[]; onFinish: () => void; onBack: () => void; onNext: () => void;
 }) {
   const quizOpen = stage === "quiz" || stage === "action" || stage === "complete";
   const actionOpen = stage === "action" || stage === "complete";
@@ -712,8 +972,7 @@ function LessonView({ lesson, stage, answers, setAnswers, quizStatus, onTakeQuiz
           {stage === "read" && <section className="understood-card"><div><span className="eyebrow">READY TO CONTINUE?</span><h2>You’ve learned it.<br />Now prove it.</h2><p>The quiz checks understanding before the day’s action unlocks.</p></div><button className="primary-button" onClick={onTakeQuiz}>Understood — take the quiz <ChevronRight aria-hidden="true" /></button></section>}
 
           {quizOpen && <section className="quiz-area" aria-labelledby="quiz-heading"><div className="quiz-heading"><div><span className="eyebrow">KNOWLEDGE CHECK · +10 XP</span><h2 id="quiz-heading">You’ve learned it. Now prove it.</h2></div>{stage !== "quiz" && <span className="passed-tag"><Check aria-hidden="true" /> Passed</span>}</div>
-            {stage === "quiz" && <div className="quiz-list">{lesson.quiz.map((question, questionIndex) => <fieldset className={cn("quiz-card", quizStatus === "failed" && answers[questionIndex] !== question.answer && "incorrect")} key={question.question}><legend><span>{String(questionIndex + 1).padStart(2, "0")}</span>{question.question}</legend><div>{question.options.map((option, optionIndex) => <label className={cn("answer-option", answers[questionIndex] === optionIndex && "selected")} key={option}><input type="radio" name={`question-${questionIndex}`} checked={answers[questionIndex] === optionIndex} onChange={() => setAnswers((current) => ({ ...current, [questionIndex]: optionIndex }))} /><span>{String.fromCharCode(65 + optionIndex)}</span><p>{option}</p></label>)}</div>{quizStatus === "failed" && answers[questionIndex] !== question.answer && <p className="answer-help"><X aria-hidden="true" /> {question.explanation}</p>}</fieldset>)}</div>}
-            {stage === "quiz" && <button className="primary-button quiz-submit" onClick={onSubmitQuiz}>Check my understanding <ChevronRight aria-hidden="true" /></button>}
+            {stage === "quiz" && <QuizRunner questions={lesson.quiz} answers={answers} setAnswers={setAnswers} status={quizStatus} onSubmit={onSubmitQuiz} onRetry={onRetryQuiz} submitLabel="Check my understanding" />}
           </section>}
 
           {actionOpen && <section className="action-area" aria-labelledby="action-heading"><div className="action-heading"><div className="action-icon"><Target aria-hidden="true" /></div><div><span className="eyebrow">TODAY’S ACTION · +20 XP</span><h2 id="action-heading">Now use it.</h2></div></div><p className="action-prompt">{lesson.actionPrompt}</p><p className="action-hint">{lesson.actionHint}</p>{!completed ? <textarea value={actionText} onChange={(event) => setActionText(event.target.value.slice(0, 300))} placeholder="Write the small action you will actually take…" aria-label="Today’s action" maxLength={300} /> : <div className="saved-note"><Check aria-hidden="true" /><p>{actionText}</p></div>}

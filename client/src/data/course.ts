@@ -229,7 +229,122 @@ const topics: Topic[][] = [
   ],
 ];
 
-export const lessons: Lesson[] = topics.flatMap((phaseTopics, phaseIndex) =>
+/* ---------------------------------------------------------------------------
+ * Quiz depth
+ *
+ * Three questions can be passed on recognition alone. Every lesson keeps the
+ * questions written for it and is topped up to a target length that grows with
+ * the island: ten on Firstlight Cove, fifteen at the Summit, so the check gets
+ * more demanding as the material does.
+ *
+ * Generated questions are built from the lesson's own words. Their distractors
+ * are the matching lines from *other* lessons, which makes every wrong option
+ * genuinely wrong yet plausible enough to require real discrimination. All
+ * selection and shuffling is seeded from the day number, so a learner returning
+ * to a day sees exactly the quiz they saw before.
+ * ------------------------------------------------------------------------ */
+
+/** Ten questions on island one, rising evenly to fifteen on island ten. */
+export const questionCountForPhase = (phaseId: number) => 10 + Math.round(((phaseId - 1) * 5) / 9);
+
+/** Understanding is shown at roughly seven in ten, whatever the quiz length. */
+export const passMark = (questionCount: number) => Math.ceil(questionCount * 0.7);
+
+/** Small deterministic PRNG, so a given day always builds the same quiz. */
+const seeded = (seed: number) => {
+  let state = ((seed + 1) * 2654435761) >>> 0;
+  return () => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state / 4294967296;
+  };
+};
+
+const shuffled = <T>(items: T[], random: () => number) => {
+  const copy = [...items];
+  for (let index = copy.length - 1; index > 0; index--) {
+    const swap = Math.floor(random() * (index + 1));
+    [copy[index], copy[swap]] = [copy[swap], copy[index]];
+  }
+  return copy;
+};
+
+type GeneratedField = "keyIdea" | "why" | "example" | "actionPrompt" | "bonus";
+
+const fieldPrompts: { field: GeneratedField; question: string; explain: (lesson: Lesson) => string }[] = [
+  { field: "keyIdea", question: "Which idea is the heart of this lesson?", explain: (lesson) => `The lesson turns on this: ${lesson.keyIdea}` },
+  { field: "why", question: "Why does this lesson matter?", explain: (lesson) => lesson.why },
+  { field: "example", question: "Which example shows this lesson at work?", explain: (lesson) => lesson.example },
+  { field: "actionPrompt", question: "What does this day actually ask you to do?", explain: (lesson) => `The day is complete once you have done this: ${lesson.actionPrompt}` },
+  { field: "bonus", question: "Which optional challenge belongs to this day?", explain: (lesson) => `The bonus is optional, and it is this: ${lesson.bonus}` },
+];
+
+/** Questions about the course's own method, rotated so days do not repeat. */
+const methodBank: QuizQuestion[] = [
+  { question: "What has to happen before a day can be completed?", options: ["A short check of understanding, then a named real action", "A long reflection", "A perfect score", "Reading the lesson twice"], answer: 0, explanation: "Understanding is checked first, and the day completes only when you name a real action." },
+  { question: "What makes an action worth recording?", options: ["It is specific enough that you would know whether you did it", "It sounds impressive", "It covers every part of your life", "It can be finished instantly"], answer: 0, explanation: "A specific action can be carried out and checked. A vague intention cannot." },
+  { question: "What do the practice marks in this course measure?", options: ["Activity, not your worth or your faith", "How disciplined a person you are", "Whether you deserve reward", "How you compare with other learners"], answer: 0, explanation: "Progress markers describe activity. They are not a measure of worth, character or faith." },
+  { question: "You return after several missed days. What does the route ask?", options: ["Take the current step honestly", "Start the whole course again", "Complete every missed day first", "Wait until you feel ready"], answer: 0, explanation: "The route asks for a return, not a performance or a penalty." },
+  { question: "What is the role of the reflection you write?", options: ["It helps carry the learning forward, but is not proof on its own", "It is the main proof of learning", "It replaces the action", "It is only for the final test"], answer: 0, explanation: "Reflection supports the learning. Understanding and action are what the day requires." },
+  { question: "How does this course treat an idea from outside Islam?", options: ["It can be considered carefully, but is never presented as identical to Islam", "It is rejected without thought", "It is treated as equal to revelation", "It is used only for decoration"], answer: 0, explanation: "Useful ideas are considered thoughtfully, and no outside framework is presented as identical to Islam." },
+  { question: "What does the One Percent Philosophy actually claim?", options: ["A small improvement becomes powerful when understood, applied and returned to", "Small effort guarantees fast results", "One percent daily growth compounds automatically", "Only large changes are worth making"], answer: 0, explanation: "The strength of a small improvement comes from understanding, application and return." },
+  { question: "What is the honest response to a day you finished badly?", options: ["Notice what happened, and choose the next useful step", "Decide the effort has failed", "Double tomorrow's work to compensate", "Avoid recording it"], answer: 0, explanation: "A poor day is information to act on, not a verdict to carry." },
+  { question: "Why does each island have its own landscape and landmark?", options: ["A distinct place gives the phase's lessons somewhere to be remembered", "It makes the course look like a game", "It rewards faster learners", "It hides the lessons behind decoration"], answer: 0, explanation: "The islands are memory environments: one place, one landmark, one cue per ten days." },
+  { question: "What does self-discipline mean in this course?", options: ["Doing what matters when it is time to do it, and returning after a slip", "Never resting", "Ignoring how you feel", "Working until exhaustion"], answer: 0, explanation: "Mature discipline is doing the right next thing at the right time, with honest recovery." },
+  { question: "A lesson conflicts with what you already believe. What is useful first?", options: ["Understand it accurately before accepting or rejecting it", "Reject it immediately", "Accept it without testing", "Skip the day"], answer: 0, explanation: "Understanding an idea properly comes before judging it." },
+  { question: "What is the purpose of the bonus challenge?", options: ["An optional harder application for a day you have capacity", "A requirement for completion", "A way to skip ahead", "A test of willpower"], answer: 0, explanation: "The bonus is optional. Completing the day never depends on it." },
+  { question: "How should the hundred days end?", options: ["With a method you keep using, not a finished person", "With every habit permanently fixed", "With a final score", "With nothing left to learn"], answer: 0, explanation: "The course builds a way of working that continues after Day 100." },
+  { question: "What makes a knowledge check useful?", options: ["Being asked to retrieve an idea shows whether you hold it", "It proves you read carefully", "It makes the lesson feel harder", "It records a score for later"], answer: 0, explanation: "Retrieving an idea is a far better test of understanding than re-reading it." },
+];
+
+const buildQuiz = (lesson: Lesson, everyLesson: Lesson[]): QuizQuestion[] => {
+  const target = questionCountForPhase(lesson.phase.id);
+  const random = seeded(lesson.day);
+  // Authored questions list their correct option first. Shuffle every question's
+  // options so position is never a tell — seeded, so it stays put between visits.
+  const reorder = (question: QuizQuestion): QuizQuestion => {
+    const options = shuffled(question.options, random);
+    return { ...question, options, answer: options.indexOf(question.options[question.answer]) };
+  };
+  const questions: QuizQuestion[] = lesson.quiz.map(reorder);
+  const seen = new Set(questions.map((question) => question.question));
+
+  // Questions drawn from this lesson's own wording.
+  for (const prompt of shuffled(fieldPrompts, random)) {
+    if (questions.length >= target) break;
+    if (seen.has(prompt.question)) continue;
+    const correct = lesson[prompt.field];
+    const pool = everyLesson.filter((other) => other.day !== lesson.day).map((other) => other[prompt.field]).filter((value) => value !== correct);
+    const distractors = shuffled(pool, random).slice(0, 3);
+    if (distractors.length < 3) continue;
+    const options = shuffled([correct, ...distractors], random);
+    questions.push({ question: prompt.question, options, answer: options.indexOf(correct), explanation: prompt.explain(lesson) });
+    seen.add(prompt.question);
+  }
+
+  // One question locating the lesson on the route.
+  const placeQuestion = "Which part of the route does this lesson belong to?";
+  if (questions.length < target && !seen.has(placeQuestion)) {
+    const correct = `${lesson.phase.island} — ${lesson.phase.title}`;
+    const others = shuffled(phases.filter((phase) => phase.id !== lesson.phase.id), random).slice(0, 3).map((phase) => `${phase.island} — ${phase.title}`);
+    const options = shuffled([correct, ...others], random);
+    questions.push({ question: placeQuestion, options, answer: options.indexOf(correct), explanation: `Day ${lesson.day} sits on ${lesson.phase.island}, the ${lesson.phase.title.toLowerCase()} stretch of the route.` });
+    seen.add(placeQuestion);
+  }
+
+  // Top up from the method bank, rotated by day so neighbouring days differ.
+  const offset = (lesson.day * 5) % methodBank.length;
+  for (let step = 0; step < methodBank.length && questions.length < target; step++) {
+    const question = methodBank[(offset + step) % methodBank.length];
+    if (seen.has(question.question)) continue;
+    const options = shuffled(question.options, random);
+    questions.push({ ...question, options, answer: options.indexOf(question.options[question.answer]) });
+    seen.add(question.question);
+  }
+
+  return questions;
+};
+
+const baseLessons: Lesson[] = topics.flatMap((phaseTopics, phaseIndex) =>
   phaseTopics.map((topic, topicIndex) => ({
     ...topic,
     day: phaseIndex * 10 + topicIndex + 1,
@@ -237,5 +352,34 @@ export const lessons: Lesson[] = topics.flatMap((phaseTopics, phaseIndex) =>
   })),
 );
 
+export const lessons: Lesson[] = baseLessons.map((lesson) => ({ ...lesson, quiz: buildQuiz(lesson, baseLessons) }));
+
 export const getLesson = (day: number) => lessons.find((lesson) => lesson.day === day) ?? lessons[0];
+
+/** The ten lessons of one island, in route order. */
+export const lessonsForPhase = (phaseId: number) => lessons.filter((lesson) => lesson.phase.id === phaseId);
+
+/**
+ * The recheck sitting at the end of an island: eight questions sampled across
+ * its ten days, so passing needs the whole stretch rather than the last lesson.
+ */
+export const RECHECK_LENGTH = 8;
+
+export const buildRecheck = (phaseId: number): QuizQuestion[] => {
+  const random = seeded(1000 + phaseId);
+  const island = lessonsForPhase(phaseId);
+  const picked: QuizQuestion[] = [];
+  const seen = new Set<string>();
+  // Take one question from each day first, so every lesson is represented.
+  for (const lesson of shuffled(island, random)) {
+    if (picked.length >= RECHECK_LENGTH) break;
+    const candidates = lesson.quiz.filter((question) => !seen.has(question.question));
+    if (!candidates.length) continue;
+    const question = candidates[Math.floor(random() * candidates.length)];
+    picked.push(question);
+    seen.add(question.question);
+  }
+  return picked;
+};
+
 export { phases };
