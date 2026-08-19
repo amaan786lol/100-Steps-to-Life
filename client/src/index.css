@@ -340,6 +340,34 @@ textarea:focus { border-color: var(--moss); box-shadow: 0 0 0 3px rgba(53, 106, 
 /* Waypoint coordinates come from `coveRoute` in Home.tsx as inline styles. */
 .cove-waypoint.locked { opacity: .66; }
 
+/* --- "Explain the psychology": home-screen disclosure ------------------- */
+.psychology-panel { overflow: hidden; border: 1px solid var(--line); border-radius: 21px; background: var(--paper); box-shadow: var(--shadow-soft); }
+.psychology-panel summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 23px; cursor: pointer; list-style: none; }
+.psychology-panel summary::-webkit-details-marker { display: none; }
+.psychology-panel summary:hover { background: color-mix(in srgb, var(--moss-pale) 45%, transparent); }
+.psychology-panel summary:focus-visible { outline: 2px solid var(--moss); outline-offset: -3px; }
+.psychology-panel summary h2 { margin: 7px 0 0; color: var(--ink); font-size: clamp(28px, 7vw, 40px); font-weight: 600; line-height: .95; }
+.psychology-panel summary h2 em { color: var(--moss); font-style: normal; }
+.psychology-panel summary i { display: grid; flex: none; place-items: center; width: 38px; height: 38px; border: 1px solid var(--line); border-radius: 50%; color: var(--moss); transition: transform 200ms var(--ease-out), background-color 200ms var(--ease-out); }
+.psychology-panel summary i svg { width: 17px; height: 17px; }
+.psychology-panel[open] summary i { background: var(--moss-pale); transform: rotate(90deg); }
+.psychology-body { padding: 0 23px 25px; }
+.psychology-lede { max-width: 560px; margin: 0 0 20px; color: var(--muted); font-size: 13px; line-height: 1.65; }
+.psychology-points { display: grid; gap: 13px; }
+/* The icon occupies column one across both rows, so the heading and the
+   paragraph share the full-width second column. */
+.psychology-points article { display: grid; grid-template-columns: 34px minmax(0, 1fr); align-content: start; gap: 4px 13px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--parchment); }
+.psychology-points article > span { display: grid; grid-row: span 2; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--moss-pale); color: var(--moss-dark); }
+.psychology-points article > span svg { width: 16px; height: 16px; }
+.psychology-points h3 { align-self: center; margin: 0; min-height: 34px; display: flex; align-items: center; color: var(--ink); font-family: "Fraunces", Georgia, serif; font-size: 16px; font-weight: 600; line-height: 1.2; }
+.psychology-points p { margin: 0; color: var(--ink-soft); font-size: 12.5px; line-height: 1.6; }
+.psychology-note { display: flex; gap: 8px; margin: 18px 0 0; padding-top: 15px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; line-height: 1.6; }
+@media (min-width: 620px) { .psychology-points { grid-template-columns: repeat(2, minmax(0, 1fr)); } .psychology-body { padding: 0 29px 30px; } .psychology-panel summary { padding: 29px; } }
+@media (min-width: 950px) { .psychology-points { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.theme-night .psychology-points article { background: #102a34; }
+.theme-night .psychology-points article > span { background: #183e38; color: #b8e6c9; }
+.theme-green .psychology-points article { background: #f2f8ee; }
+
 /* --- Cove scenery -----------------------------------------------------
    One map, three times of day. Each layer sits behind the route (z-index 2)
    and the waypoints (z-index 3), so markers always read in front of it. */

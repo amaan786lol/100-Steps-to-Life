@@ -537,6 +537,7 @@ function TodayView({ data, lesson, coursePercent, onStart, onMap, onAchievements
 
       {isFirstStep && <FirstlightCove onStart={onStart} />}
       <CourseMethod />
+      <CoursePsychology />
       <AccountBackup account={account} onSignIn={onSignIn} onSaveBackup={onSaveBackup} onRestoreBackup={onRestoreBackup} onLogout={onLogout} />
       {isFirstStep && <section className="course-threshold"><div><span className="eyebrow-light">THE START OF THE COURSE</span><h2>Start improving<br /><em>your life.</em></h2><p>Begin at Firstlight Cove. You only need to take the first honest step.</p></div><button className="hero-button primary-button" onClick={onStart}>Start improving your life. <ChevronRight aria-hidden="true" /></button></section>}
     </div>
@@ -571,6 +572,37 @@ function FirstlightCove({ onStart }: { onStart: () => void }) {
 
 function CourseMethod() {
   return <section className="course-method"><div className="method-heading"><span className="eyebrow">HOW THIS COURSE IS MADE</span><h2>Useful ideas are only the<br /><em>beginning.</em></h2><p>Hundred Steps to Life is shaped by the One Percent Philosophy: a small, meaningful improvement becomes powerful when it is understood, applied, and returned to.</p></div><div className="method-rules"><article><span>01</span><h3>Learn the idea</h3><p>Each lesson gives one practical idea, not a pile of vague motivation.</p></article><article><span>02</span><h3>Check understanding</h3><p>A short knowledge check separates recognition from real understanding.</p></article><article><span>03</span><h3>Use it in life</h3><p>The day only becomes complete when you name a small, real action.</p></article><article><span>04</span><h3>Return with honesty</h3><p>Missed steps are information. The route asks for a return, not a performance.</p></article></div><div className="method-boundary"><Compass aria-hidden="true" /><p>Modules use Islamic principles, careful historical thought, and practical disciplines to support a responsible life. This course is a guide for reflection and action—not a substitute for qualified religious, medical, legal, or mental-health advice.</p></div></section>;
+}
+
+// Sits on the home screen only. The lessons themselves stay practical; anyone
+// who wants the reasoning behind the course's shape can open it here.
+const psychologyPoints = [
+  { icon: CircleHelp, title: "Recalling beats re-reading", detail: "Reading an idea again makes it feel familiar. Being asked to retrieve it shows whether you actually hold it. That is why understanding is checked before a day can be completed." },
+  { icon: Target, title: "A named action is a kept action", detail: "A general intention to improve rarely survives a busy day. A specific step, tied to a real moment, is far easier to carry out — so the day asks what you will do, and when." },
+  { icon: Footprints, title: "Beginning is the expensive part", detail: "Most effort is spent starting, not continuing. Each day asks for one honest step rather than an overhaul, because a small start is a step you will actually take." },
+  { icon: Map, title: "Places make memories findable", detail: "Ideas learned in one undifferentiated stream blur together. Ten distinct islands give each phase its own landscape, landmark and cue, so a lesson has somewhere to live." },
+  { icon: RotateCcw, title: "Shame ends courses, not missed days", detail: "A missed day is rarely what stops someone. Deciding they have failed is. Returns are counted instead of unbroken streaks, so a gap is information to act on, not a verdict." },
+  { icon: Sparkles, title: "Signals help, scores mislead", detail: "Progress markers make effort visible, but they measure activity — never worth, character or faith. They are called practice marks and returns because that is all they describe." },
+];
+
+function CoursePsychology() {
+  return <section className="course-psychology">
+    <details className="psychology-panel">
+      <summary>
+        <div><span className="eyebrow">WHY THE COURSE IS SHAPED THIS WAY</span><h2>Explain the <em>psychology.</em></h2></div>
+        <i aria-hidden="true"><ChevronRight /></i>
+      </summary>
+      <div className="psychology-body">
+        <p className="psychology-lede">Every rule in Hundred Steps to Life exists for a reason. Here is the reasoning, in plain terms, so you can judge the method rather than take it on trust.</p>
+        <div className="psychology-points">
+          {psychologyPoints.map(({ icon: Icon, title, detail }) => (
+            <article key={title}><span><Icon aria-hidden="true" /></span><h3>{title}</h3><p>{detail}</p></article>
+          ))}
+        </div>
+        <p className="psychology-note">These are design principles, not clinical claims, and the course is not a substitute for professional mental-health care.</p>
+      </div>
+    </details>
+  </section>;
 }
 
 function AccountBackup({ account, onSignIn, onSaveBackup, onRestoreBackup, onLogout }: { account: AccountState; onSignIn: () => void; onSaveBackup: () => void; onRestoreBackup: () => void; onLogout: () => void }) {
