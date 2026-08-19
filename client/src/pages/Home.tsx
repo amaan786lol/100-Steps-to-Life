@@ -43,23 +43,23 @@ import { getLesson, lessons, phases, type CoursePhase, type Lesson } from "../da
 
 const STORAGE_KEY = "hundred-steps-to-life-v1";
 const THEME_STORAGE_KEY = "hundred-steps-to-life-theme";
-const LOGO_URL = "/manus-storage/100-steps-to-life-app-icon_4d2942a9.svg";
-const FULL_LOGO_URL = "/manus-storage/100-steps-to-life-logo_29c14b70.svg";
-const HERO_URL = "/manus-storage/hero-path_d07c97f2.jpg";
-const MAP_URL = "/manus-storage/course-map-landscape_16f3c69b.jpg";
-const BADGE_URL = "/manus-storage/achievement-badge_b80c8a23.jpg";
-const CONNECTED_WORLD_URL = "/manus-storage/connected-world_e2d9d2e1.svg";
+const LOGO_URL = "/media/100-steps-to-life-app-icon.svg";
+const FULL_LOGO_URL = "/media/100-steps-to-life-logo.svg";
+const HERO_URL = "/media/hero-path.jpg";
+const MAP_URL = "/media/course-map-landscape.jpg";
+const BADGE_URL = "/media/achievement-badge.jpg";
+const CONNECTED_WORLD_URL = "/media/connected-world.svg";
 const ISLAND_IMAGES: Record<number, string> = {
-  1: "/manus-storage/island-firstlight-cove_d05c33ab.svg",
-  2: "/manus-storage/island-lantern-gardens_5e6aca50.svg",
-  3: "/manus-storage/island-training-ridge_0b5212a2.svg",
-  4: "/manus-storage/island-observatory_33956859.svg",
-  5: "/manus-storage/island-bridgehaven_ca43af94.svg",
-  6: "/manus-storage/island-wildwood-valley_45520909.svg",
-  7: "/manus-storage/island-makers-quay_72f41ffa.svg",
-  8: "/manus-storage/island-value-harbour_00f8a2e0.svg",
-  9: "/manus-storage/island-common-ground_5d5be2b3.svg",
-  10: "/manus-storage/island-summit_c1f4d938.svg",
+  1: "/media/island-firstlight-cove.svg",
+  2: "/media/island-lantern-gardens.svg",
+  3: "/media/island-training-ridge.svg",
+  4: "/media/island-observatory.svg",
+  5: "/media/island-bridgehaven.svg",
+  6: "/media/island-wildwood-valley.svg",
+  7: "/media/island-makers-quay.svg",
+  8: "/media/island-value-harbour.svg",
+  9: "/media/island-common-ground.svg",
+  10: "/media/island-summit.svg",
 };
 
 type View = "today" | "map" | "achievements" | "progress" | "takeaways" | "lesson" | "final";
@@ -543,12 +543,28 @@ function TodayView({ data, lesson, coursePercent, onStart, onMap, onAchievements
   );
 }
 
+// Where each of the ten Firstlight Cove waypoints sits on the route. Held here
+// rather than in CSS sibling selectors so adding scenery to the map can never
+// shift the route out from under the markers.
+const coveRoute = [
+  { left: "3%", bottom: "103px" },
+  { left: "12%", bottom: "29px" },
+  { left: "32%", bottom: "91px" },
+  { left: "47%", bottom: "123px" },
+  { left: "61%", bottom: "108px" },
+  { left: "73%", bottom: "72px" },
+  { left: "68%", bottom: "35px" },
+  { left: "51%", bottom: "21px" },
+  { left: "36%", bottom: "31px" },
+  { left: "24%", bottom: "60px" },
+];
+
 function FirstlightCove({ onStart }: { onStart: () => void }) {
   return <section className="cove-entry">
     <div className="cove-copy"><span className="eyebrow">YOUR OPENING ISLAND</span><h2>Firstlight<br /><em>Cove.</em></h2><p>A calm place to begin: notice where you are, choose a direction, and take one honest step inland.</p><div className="cove-meta"><span>FOUNDATION</span><i /> <span>DAYS 1–10</span></div></div>
     <div className="cove-map" aria-label="Firstlight Cove route with Day 1 active">
-      <div className="cove-sun" aria-hidden="true" /><div className="cove-water" aria-hidden="true" /><div className="cove-shore" aria-hidden="true" /><div className="cove-trail" aria-hidden="true" />
-      {Array.from({ length: 10 }, (_, index) => index === 0 ? <button className="cove-waypoint current" key={index} onClick={onStart} aria-label="Open Day 1: Arrival"><span>01</span><small>Arrival</small></button> : <span className="cove-waypoint locked" key={index} aria-label={`Day ${index + 1}, locked`}><span>{String(index + 1).padStart(2, "0")}</span></span>)}
+      <div className="cove-water" aria-hidden="true" /><div className="cove-stars" aria-hidden="true" /><div className="cove-sun" aria-hidden="true" /><div className="cove-clouds" aria-hidden="true" /><div className="cove-shore" aria-hidden="true" /><div className="cove-trees" aria-hidden="true" /><div className="cove-trail" aria-hidden="true" />
+      {coveRoute.map((spot, index) => index === 0 ? <button className="cove-waypoint current" key={index} style={spot} onClick={onStart} aria-label="Open Day 1: Arrival"><span>01</span><small>Arrival</small></button> : <span className="cove-waypoint locked" key={index} style={spot} aria-label={`Day ${index + 1}, locked`}><span>{String(index + 1).padStart(2, "0")}</span></span>)}
     </div>
   </section>;
 }

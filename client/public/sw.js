@@ -1,10 +1,10 @@
-const CACHE_NAME = "hundred-steps-life-shell-v3";
+const CACHE_NAME = "hundred-steps-life-shell-v4";
 const APP_SHELL = [
   "/",
   "/manifest.webmanifest",
-  "/manus-storage/100-steps-to-life-app-icon_4d2942a9.svg",
-  "/manus-storage/100-steps-to-life-app-icon-192_7e3a77c1.png",
-  "/manus-storage/100-steps-to-life-app-icon-512_49a17a10.png"
+  "/media/100-steps-to-life-app-icon.svg",
+  "/media/100-steps-to-life-app-icon-192.png",
+  "/media/100-steps-to-life-app-icon-512.png"
 ];
 
 async function cacheApplicationShell() {
