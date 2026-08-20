@@ -631,3 +631,204 @@ textarea:focus { border-color: var(--moss); box-shadow: 0 0 0 3px rgba(53, 106, 
 .island-passage.pending span { flex: 1; }
 .theme-night .island-passage.pending { background: #2b281a; color: #f4d794; }
 @media (prefers-reduced-motion: reduce) { .island-passage.pending svg:first-child { animation: none; } }
+
+/* ===========================================================================
+   The sky
+   Each appearance mode gets its own weather behind the whole app: a low sun
+   and cloud banks in the Morning, a moon with stars and a few quasars at
+   Night, a canopy in Green. It sits behind every card and takes no clicks, so
+   it reads in the gutters and around the edges of the page without ever
+   competing with the route or the lesson.
+   ======================================================================== */
+.field-app { position: relative; isolation: isolate; }
+.sky { position: fixed; z-index: 0; inset: 0; overflow: hidden; pointer-events: none; }
+/* Only the layout columns are lifted above the sky. The skip link keeps its
+   own fixed positioning, which a blanket rule here would silently override. */
+.field-app > aside, .field-app > section { position: relative; z-index: 1; }
+.sky > * { position: absolute; opacity: 0; transition: opacity 700ms var(--ease-out); }
+
+/* The disc: sun by day, moon by night. */
+.sky-body { top: 13vh; right: 6vw; width: 84px; height: 84px; border-radius: 50%; }
+.sky-glow { top: calc(13vh - 48px); right: calc(6vw - 48px); width: 180px; height: 180px; border-radius: 50%; }
+
+/* --- Morning ------------------------------------------------------------ */
+.theme-morning .sky-body { opacity: 1; background: radial-gradient(circle at 38% 34%, #fff3c4, #f3cd72 62%, #e9b953); box-shadow: 0 0 44px 12px rgba(243,205,114,.32); animation: sun-breathe 9s ease-in-out infinite; }
+.theme-morning .sky-glow { opacity: .55; background: radial-gradient(circle, rgba(246,214,132,.5), transparent 68%); animation: sun-halo 11s ease-in-out infinite; }
+.theme-morning .sky-clouds { opacity: .85; inset: 0; background-repeat: no-repeat; background-image:
+  radial-gradient(72px 24px at 14% 13%, rgba(255,255,255,.95), transparent 72%),
+  radial-gradient(50px 18px at 24% 17%, rgba(255,255,255,.8), transparent 72%),
+  radial-gradient(88px 28px at 72% 30%, rgba(255,255,255,.62), transparent 72%),
+  radial-gradient(56px 20px at 46% 8%, rgba(255,255,255,.5), transparent 72%),
+  radial-gradient(64px 22px at 88% 55%, rgba(255,255,255,.4), transparent 72%);
+  animation: cloud-drift 44s ease-in-out infinite; }
+
+/* --- Night -------------------------------------------------------------- */
+/* An inset shadow in the page colour carves the crescent. */
+.theme-night .sky-body { opacity: 1; background: #eef4ff; box-shadow: 0 0 46px 11px rgba(203,224,255,.2), inset -25px 9px 0 -4px var(--parchment); animation: moon-breathe 12s ease-in-out infinite; }
+.theme-night .sky-glow { opacity: .5; background: radial-gradient(circle, rgba(180,209,255,.26), transparent 66%); }
+.theme-night .sky-stars { opacity: 1; inset: 0; background-repeat: no-repeat; animation: star-twinkle 7s ease-in-out infinite; background-image:
+  radial-gradient(1.7px 1.7px at 8% 9%, #fdf6e0 50%, transparent 51%),
+  radial-gradient(1.3px 1.3px at 19% 22%, #dce9ff 50%, transparent 51%),
+  radial-gradient(1.6px 1.6px at 31% 6%, #fff7e2 50%, transparent 51%),
+  radial-gradient(1.2px 1.2px at 43% 17%, #cfe0ff 50%, transparent 51%),
+  radial-gradient(1.8px 1.8px at 56% 11%, #fdf6e0 50%, transparent 51%),
+  radial-gradient(1.3px 1.3px at 67% 26%, #e4eeff 50%, transparent 51%),
+  radial-gradient(1.5px 1.5px at 79% 8%, #fff7e2 50%, transparent 51%),
+  radial-gradient(1.2px 1.2px at 91% 19%, #d6e5ff 50%, transparent 51%),
+  radial-gradient(1.6px 1.6px at 13% 41%, #fdf6e0 50%, transparent 51%),
+  radial-gradient(1.2px 1.2px at 27% 58%, #dce9ff 50%, transparent 51%),
+  radial-gradient(1.4px 1.4px at 38% 74%, #fff7e2 50%, transparent 51%),
+  radial-gradient(1.2px 1.2px at 52% 63%, #cfe0ff 50%, transparent 51%),
+  radial-gradient(1.7px 1.7px at 63% 86%, #fdf6e0 50%, transparent 51%),
+  radial-gradient(1.3px 1.3px at 74% 52%, #e4eeff 50%, transparent 51%),
+  radial-gradient(1.5px 1.5px at 86% 71%, #fff7e2 50%, transparent 51%),
+  radial-gradient(1.2px 1.2px at 95% 44%, #d6e5ff 50%, transparent 51%),
+  radial-gradient(1.4px 1.4px at 5% 67%, #fdf6e0 50%, transparent 51%),
+  radial-gradient(1.2px 1.2px at 47% 36%, #dce9ff 50%, transparent 51%); }
+
+/* Quasars: a handful of far brighter points, each with a cross of light. */
+.sky-quasars { inset: 0; }
+.theme-night .sky-quasars { opacity: 1; }
+.sky-quasars i { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #ffffff; box-shadow: 0 0 10px 3px rgba(190,220,255,.85), 0 0 26px 9px rgba(126,170,255,.34); }
+.sky-quasars i::before, .sky-quasars i::after { position: absolute; top: 50%; left: 50%; background: linear-gradient(90deg, transparent, rgba(214,232,255,.9), transparent); content: ""; transform: translate(-50%, -50%); }
+.sky-quasars i::before { width: 42px; height: 1px; }
+.sky-quasars i::after { width: 1px; height: 42px; background: linear-gradient(180deg, transparent, rgba(214,232,255,.9), transparent); }
+.sky-quasars i:nth-child(1) { top: 15%; left: 22%; animation: quasar 6s ease-in-out infinite; }
+.sky-quasars i:nth-child(2) { top: 62%; left: 78%; animation: quasar 7.5s ease-in-out .9s infinite; }
+.sky-quasars i:nth-child(3) { top: 38%; left: 58%; animation: quasar 9s ease-in-out 2.1s infinite; }
+
+/* --- Green --------------------------------------------------------------- */
+.theme-green .sky-body { opacity: .85; background: radial-gradient(circle at 40% 36%, #fffbe4, #f0e09a 64%, #dcc978); box-shadow: 0 0 34px 10px rgba(215,206,140,.28); }
+.theme-green .sky-canopy { opacity: .9; right: 0; bottom: 0; left: 0; height: 132px; background-repeat: repeat-x; background-position: left bottom; background-size: 132px 132px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 132 132'%3E%3Cg fill='%232f6b45' fill-opacity='.34'%3E%3Cpath d='M22 122 34 62 46 122z'/%3E%3Cpath d='M60 122 70 78 80 122z'/%3E%3Cpath d='M96 122 110 54 124 122z'/%3E%3C/g%3E%3Cg fill='%23574026' fill-opacity='.32'%3E%3Crect x='33' y='118' width='2.6' height='12'/%3E%3Crect x='69' y='118' width='2.2' height='12'/%3E%3Crect x='109' y='118' width='2.8' height='12'/%3E%3C/g%3E%3C/svg%3E"); }
+.theme-green .sky-clouds { opacity: .5; inset: 0; background-repeat: no-repeat; background-image:
+  radial-gradient(80px 26px at 20% 15%, rgba(255,255,255,.8), transparent 72%),
+  radial-gradient(60px 20px at 70% 26%, rgba(255,255,255,.6), transparent 72%);
+  animation: cloud-drift 52s ease-in-out infinite; }
+
+@media (min-width: 1100px) {
+  .sky-body { top: 9vh; right: 7vw; width: 132px; height: 132px; }
+  .sky-glow { top: calc(9vh - 74px); right: calc(7vw - 74px); width: 280px; height: 280px; }
+  .theme-night .sky-body { box-shadow: 0 0 70px 16px rgba(203,224,255,.22), inset -39px 14px 0 -6px var(--parchment); }
+}
+
+@keyframes sun-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035); } }
+@keyframes sun-halo { 0%, 100% { opacity: .45; transform: scale(1); } 50% { opacity: .68; transform: scale(1.07); } }
+@keyframes moon-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }
+@keyframes star-twinkle { 0%, 100% { opacity: .68; } 50% { opacity: 1; } }
+@keyframes quasar { 0%, 100% { opacity: .45; transform: scale(.85); } 50% { opacity: 1; transform: scale(1.18); } }
+@keyframes cloud-drift { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(28px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .sky-body, .sky-glow, .sky-stars, .sky-clouds, .sky-quasars i { animation: none !important; }
+}
+
+/* --- Opening a lesson -----------------------------------------------------
+   Arriving at a day should feel like stepping onto the next waypoint: the
+   route marker lands first, then the lesson settles in behind it. Keyed on the
+   day number, so it replays every time a lesson is opened. */
+.lesson-shell { animation: lesson-arrive 520ms var(--ease-out) both; }
+.lesson-shell > * { animation: lesson-settle 560ms var(--ease-out) both; }
+.lesson-shell > *:nth-child(1) { animation-delay: 60ms; }
+.lesson-shell > *:nth-child(2) { animation-delay: 150ms; }
+.lesson-shell > *:nth-child(3) { animation-delay: 225ms; }
+.lesson-shell > *:nth-child(n+4) { animation-delay: 290ms; }
+
+/* The day stamp drops onto the page and settles. */
+.lesson-waypoint { animation: waypoint-land 720ms var(--ease-out) both; }
+.lesson-waypoint > span { animation: waypoint-count 620ms var(--ease-out) both; }
+
+@keyframes lesson-arrive { from { opacity: 0; } to { opacity: 1; } }
+@keyframes lesson-settle { from { opacity: 0; transform: translateY(18px) scale(.988); } to { opacity: 1; transform: none; } }
+@keyframes waypoint-land {
+  0% { opacity: 0; transform: translateY(-34px) scale(1.5) rotate(-10deg); }
+  55% { opacity: 1; transform: translateY(3px) scale(.94) rotate(3deg); }
+  78% { transform: translateY(0) scale(1.04) rotate(-1deg); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes waypoint-count { 0%, 40% { opacity: 0; } 100% { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .lesson-shell, .lesson-shell > *, .lesson-waypoint, .lesson-waypoint > span {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* --- Weather on the hero --------------------------------------------------
+   The ambient sky above sits in the gutters, which is nearly nothing on a
+   phone. The hero is the one large surface always in view, so each mode also
+   gets its sky here, over the photograph and under the text. */
+.today-hero::after { position: absolute; z-index: 0; inset: 0; content: ""; pointer-events: none; }
+.today-hero .hero-content, .today-hero .hero-footer { position: relative; z-index: 1; }
+
+/* Morning: the sun clears the ridge, and the light warms the whole frame. */
+.theme-morning .today-hero::after {
+  background:
+    radial-gradient(58px 58px at 82% 20%, rgba(255,247,214,.96), rgba(250,214,126,.72) 58%, transparent 72%),
+    radial-gradient(150px 150px at 82% 20%, rgba(247,207,120,.36), transparent 70%),
+    radial-gradient(52px 17px at 24% 26%, rgba(255,255,255,.34), transparent 74%),
+    radial-gradient(38px 13px at 36% 18%, rgba(255,255,255,.26), transparent 74%),
+    linear-gradient(160deg, rgba(255,214,140,.2), transparent 52%);
+  animation: hero-sun 12s ease-in-out infinite;
+}
+
+/* Night: a crescent, a field of stars, and three quasars burning brighter. */
+.theme-night .today-hero::after {
+  background:
+    radial-gradient(circle 7px at 81.6% 15.4%, rgba(190,210,242,.5), transparent),
+    radial-gradient(circle 4px at 86.2% 19.2%, rgba(190,210,242,.42), transparent),
+    radial-gradient(circle 5px at 85.4% 14.4%, rgba(190,210,242,.32), transparent),
+    radial-gradient(circle 31px at 84% 17%, #f7faff 0 88%, rgba(206,224,252,.9) 88% 100%, transparent),
+    radial-gradient(circle 96px at 84% 17%, rgba(186,214,255,.24), transparent 74%),
+    radial-gradient(2px 2px at 12% 12%, #fff8e4 50%, transparent 51%),
+    radial-gradient(1.6px 1.6px at 26% 25%, #dbe8ff 50%, transparent 51%),
+    radial-gradient(1.9px 1.9px at 38% 9%, #fff8e4 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 52% 21%, #cfe0ff 50%, transparent 51%),
+    radial-gradient(2px 2px at 64% 32%, #fff8e4 50%, transparent 51%),
+    radial-gradient(1.6px 1.6px at 18% 38%, #dbe8ff 50%, transparent 51%),
+    radial-gradient(1.8px 1.8px at 45% 44%, #fff8e4 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 71% 52%, #cfe0ff 50%, transparent 51%),
+    radial-gradient(1.7px 1.7px at 8% 57%, #fff8e4 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 33% 63%, #dbe8ff 50%, transparent 51%),
+    linear-gradient(180deg, rgba(7,18,30,.62), rgba(7,18,30,.16) 46%, rgba(7,18,30,.5));
+  animation: hero-stars 8s ease-in-out infinite;
+}
+/* The quasars are their own layer so they can flare on a different rhythm. */
+.theme-night .today-hero .hero-content::before {
+  position: absolute; z-index: -1; inset: -28px -23px;
+  background:
+    radial-gradient(circle 2px at 22% 14%, #ffffff 0 60%, rgba(214,234,255,.9) 60% 100%, transparent),
+    radial-gradient(circle 11px at 22% 14%, rgba(142,192,255,.4), transparent 72%),
+    radial-gradient(circle 1.8px at 67% 68%, #ffffff 0 60%, rgba(214,234,255,.85) 60% 100%, transparent),
+    radial-gradient(circle 9px at 67% 68%, rgba(142,192,255,.34), transparent 72%),
+    radial-gradient(circle 1.6px at 47% 36%, #ffffff 0 60%, rgba(214,234,255,.8) 60% 100%, transparent),
+    radial-gradient(circle 8px at 47% 36%, rgba(142,192,255,.3), transparent 72%);
+  content: ""; pointer-events: none;
+  animation: hero-quasar 6.5s ease-in-out infinite;
+}
+
+/* Green: light through leaves, and a canopy along the lower edge. */
+.theme-green .today-hero::after {
+  background:
+    radial-gradient(46px 46px at 84% 18%, rgba(255,250,214,.8), transparent 68%),
+    linear-gradient(180deg, rgba(28,74,48,.36), rgba(28,74,48,.08) 40%, rgba(24,64,42,.62)),
+    repeat-x url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 150 150'%3E%3Cg fill='%231d4b31' fill-opacity='.62'%3E%3Cpath d='M18 148 32 84 46 148z'/%3E%3Cpath d='M62 148 74 102 86 148z'/%3E%3Cpath d='M104 148 120 74 136 148z'/%3E%3C/g%3E%3C/svg%3E");
+  background-position: center, center, left bottom;
+  background-size: auto, auto, 150px 150px;
+  animation: hero-leaves 16s ease-in-out infinite;
+}
+
+@keyframes hero-sun { 0%, 100% { opacity: .9; } 50% { opacity: 1; } }
+@keyframes hero-stars { 0%, 100% { opacity: .82; } 50% { opacity: 1; } }
+@keyframes hero-quasar { 0%, 100% { opacity: .4; transform: scale(.97); } 50% { opacity: 1; transform: scale(1.03); } }
+@keyframes hero-leaves { 0%, 100% { background-position: center, center, left bottom; } 50% { background-position: center, center, 16px bottom; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .today-hero::after, .theme-night .today-hero .hero-content::before {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

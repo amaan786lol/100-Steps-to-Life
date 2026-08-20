@@ -496,6 +496,14 @@ export default function Home() {
   return (
     <main className={cn("field-app", `theme-${theme}`)}>
       <a className="skip-link" href="#main-content">Skip to today’s content</a>
+      <div className="sky" aria-hidden="true">
+        <div className="sky-body" />
+        <div className="sky-glow" />
+        <div className="sky-stars" />
+        <div className="sky-quasars"><i /><i /><i /></div>
+        <div className="sky-clouds" />
+        <div className="sky-canopy" />
+      </div>
       <aside className="desktop-rail" aria-label="Primary navigation">
         <Brand />
         <nav className="rail-nav">
@@ -1058,7 +1066,7 @@ function LessonView({ lesson, stage, answers, setAnswers, quizStatus, onTakeQuiz
   const quizOpen = stage === "quiz" || stage === "action" || stage === "complete";
   const actionOpen = stage === "action" || stage === "complete";
   return (
-    <div className="lesson-shell">
+    <div className="lesson-shell" key={lesson.day}>
       <div className="lesson-topline"><button className="back-button" onClick={onBack}><ArrowLeft aria-hidden="true" /> Back to today</button><span>DAY {String(lesson.day).padStart(2, "0")} / 100</span></div>
       <section className="lesson-header"><div><p className="eyebrow">{lesson.phase.shortTitle.toUpperCase()} · {lesson.phase.range.toUpperCase()}</p><h1>{lesson.title}</h1><p>{lesson.why}</p></div><div className="lesson-waypoint"><span>{String(lesson.day).padStart(2, "0")}</span><i /></div></section>
       <div className="lesson-layout">
