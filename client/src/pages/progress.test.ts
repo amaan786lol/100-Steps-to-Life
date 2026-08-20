@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateAccuracy, completeDay, newlyUnlocked } from "./Home";
+import { COMBO_STRIKE_EVERY, COMBO_STRIKE_XP, calculateAccuracy, completeDay, newlyUnlocked, recordAnswer } from "./Home";
 import { getLesson } from "../data/course";
 
 const blank = {
@@ -11,6 +11,9 @@ const blank = {
   actions: {} as Record<number, string>,
   takeaways: {} as Record<number, string>,
   bonusDays: [] as number[],
+  rechecks: {} as Record<number, { score: number; passed: boolean }>,
+  combo: 0,
+  bestCombo: 0,
   finalTestComplete: false,
 };
 
@@ -126,5 +129,46 @@ describe("calculateAccuracy", () => {
       },
     };
     expect(calculateAccuracy(data)).toBe(Math.round((short / (short + long)) * 100));
+  });
+});
+
+describe("recordAnswer", () => {
+  const runOf = (count: number, from = blank) => {
+    let state = from;
+    for (let i = 0; i < count; i++) state = recordAnswer(state, true);
+    return state;
+  };
+
+  it("counts a run of correct answers", () => {
+    expect(runOf(3).combo).toBe(3);
+    expect(runOf(3).bestCombo).toBe(3);
+  });
+
+  it("charges a bolt every fifth correct answer, and only then", () => {
+    for (let i = 1; i < COMBO_STRIKE_EVERY; i++) expect(runOf(i).xp).toBe(0);
+    expect(runOf(COMBO_STRIKE_EVERY).xp).toBe(COMBO_STRIKE_XP);
+    expect(runOf(COMBO_STRIKE_EVERY * 2).xp).toBe(COMBO_STRIKE_XP * 2);
+    expect(runOf(COMBO_STRIKE_EVERY * 2 + 1).xp).toBe(COMBO_STRIKE_XP * 2);
+  });
+
+  it("resets the run on a miss without taking anything away", () => {
+    const missed = recordAnswer(runOf(7), false);
+    expect(missed.combo).toBe(0);
+    expect(missed.xp).toBe(COMBO_STRIKE_XP);   // the bolt already earned stays
+    expect(missed.bestCombo).toBe(7);          // and so does the best run
+  });
+
+  it("carries the run across lessons", () => {
+    // Four right at the end of one lesson, one right at the start of the next.
+    const carried = recordAnswer(runOf(4), true);
+    expect(carried.combo).toBe(COMBO_STRIKE_EVERY);
+    expect(carried.xp).toBe(COMBO_STRIKE_XP);
+  });
+
+  it("keeps combo rewards small beside naming a real action", () => {
+    // A flawless fifteen-question island pays less than one completed day.
+    const flawless = runOf(15).xp;
+    const oneDay = completeDay(blank, day()).xp;
+    expect(flawless).toBeLessThan(oneDay);
   });
 });

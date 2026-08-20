@@ -285,9 +285,25 @@ button, a { -webkit-tap-highlight-color: transparent; }
 /* Progress reads as a route: travelled pips fill, the current one glows. */
 .quiz-track { display: flex; align-items: center; gap: 5px; }
 .quiz-pip { position: relative; display: block; flex: 1; height: 4px; border-radius: 3px; background: var(--line); transition: background-color 260ms var(--ease-out), transform 260ms var(--ease-out); }
-.quiz-pip.done { background: var(--moss); }
+.quiz-pip.right { background: var(--moss); animation: pip-fill 420ms var(--ease-out) both; }
+.quiz-pip.wrong { background: var(--clay); animation: pip-fill 420ms var(--ease-out) both; }
 .quiz-pip.current { background: var(--gold); transform: scaleY(2.1); }
-.quiz-counter { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; font-variant-numeric: tabular-nums; }
+.quiz-counter { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; font-variant-numeric: tabular-nums; }
+
+/* --- The run of correct answers ----------------------------------------- */
+.combo-meter { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); transition: color 200ms var(--ease-out), border-color 200ms var(--ease-out); }
+.combo-meter svg { width: 13px; height: 13px; }
+.combo-meter.lit { border-color: color-mix(in srgb, var(--gold) 55%, var(--line)); color: var(--ink); animation: combo-tick 420ms var(--ease-out); }
+.combo-meter.hot { border-color: var(--gold); background: var(--gold-pale); color: #8a6410; }
+.combo-meter.hot svg { color: var(--gold); animation: combo-flicker 1.6s ease-in-out infinite; }
+
+/* Every fifth correct answer in a row strikes. */
+.combo-strike { position: absolute; z-index: 6; top: 50%; left: 50%; display: grid; justify-items: center; gap: 4px; padding: 20px 26px; border-radius: 18px; background: rgba(16,34,44,.93); box-shadow: 0 20px 60px rgba(0,0,0,.34); color: #fff8e0; text-align: center; pointer-events: none; transform: translate(-50%, -50%); animation: strike-card 1500ms var(--ease-out) both; }
+.combo-strike svg { width: 40px; height: 62px; fill: var(--gold); filter: drop-shadow(0 0 14px rgba(233,190,90,.85)); animation: bolt-drop 620ms var(--ease-out) both; }
+.combo-strike span { font: 600 20px/1 "Fraunces", Georgia, serif; }
+.combo-strike small { color: var(--gold); font-size: 11px; font-weight: 800; letter-spacing: .1em; }
+.quiz-runner { position: relative; }
+.quiz-runner.striking::before { position: absolute; z-index: 5; inset: -14px; border-radius: 18px; background: radial-gradient(circle at 50% 45%, rgba(246,214,132,.42), transparent 62%); content: ""; pointer-events: none; animation: strike-flash 620ms var(--ease-out) both; }
 
 .quiz-question { margin: 0; padding: 0; border: 0; animation: question-in 340ms var(--ease-out) both; }
 .quiz-question legend { display: block; width: 100%; padding: 0; color: var(--ink); font: 600 21px/1.3 "Fraunces", Georgia, serif; text-wrap: balance; }
@@ -331,6 +347,25 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .recheck-seal svg { width: 28px; height: 28px; }
 @media (min-width: 620px) { .recheck-hero { padding: 32px; min-height: 330px; } .recheck-body { padding: 28px; } }
 
+/* Answer feedback lands as soon as an option is chosen. */
+.quiz-options .answer-option.locked { cursor: default; }
+.quiz-options .answer-option.is-right { border-color: var(--moss); background: var(--moss-pale); animation: answer-right 520ms var(--ease-out); }
+.quiz-options .answer-option.is-right > span { border-color: var(--moss); background: var(--moss); color: white; }
+.quiz-options .answer-option.is-wrong { border-color: var(--clay); background: var(--clay-pale); animation: answer-wrong 420ms var(--ease-out); }
+.quiz-options .answer-option.is-wrong > span { border-color: var(--clay); background: var(--clay); color: white; }
+.quiz-options .answer-option > span svg { width: 14px; height: 14px; }
+.answer-verdict { margin: 12px 0 0; padding: 11px 13px; border-left: 3px solid var(--moss); border-radius: 0 9px 9px 0; background: var(--parchment); color: var(--ink-soft); font-size: 12.5px; line-height: 1.55; animation: verdict-in 380ms var(--ease-out) both; }
+.answer-verdict.wrong { border-left-color: var(--clay); }
+
+@keyframes pip-fill { from { transform: scaleY(2.4); } to { transform: none; } }
+@keyframes combo-tick { 0% { transform: scale(1); } 40% { transform: scale(1.14); } 100% { transform: scale(1); } }
+@keyframes combo-flicker { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+@keyframes bolt-drop { 0% { opacity: 0; transform: translateY(-46px) scale(.7); } 55% { opacity: 1; transform: translateY(5px) scale(1.1); } 100% { opacity: 1; transform: none; } }
+@keyframes strike-card { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.82); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1.04); } 22% { transform: translate(-50%, -50%) scale(1); } 78% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -58%) scale(.98); } }
+@keyframes strike-flash { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes answer-right { 0% { transform: scale(1); } 38% { transform: scale(1.022); } 100% { transform: scale(1); } }
+@keyframes answer-wrong { 0%, 100% { transform: translateX(0); } 22% { transform: translateX(-5px); } 45% { transform: translateX(4px); } 70% { transform: translateX(-2px); } }
+@keyframes verdict-in { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: none; } }
 @keyframes question-in { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
 @keyframes option-in { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
 @keyframes review-in { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
@@ -486,11 +521,15 @@ textarea:focus { border-color: var(--moss); box-shadow: 0 0 0 3px rgba(53, 106, 
   /* Entrances and emphasis become instant, but nothing disappears: every
      animated element is left at its finished state. */
   .quiz-question, .quiz-options .answer-option, .quiz-review, .quiz-review-list li,
-  .recheck-shell, .recheck-seal, .celebration-note, .stat-pop {
+  .recheck-shell, .recheck-seal, .answer-verdict, .combo-meter, .combo-meter.hot svg,
+  .quiz-pip, .quiz-runner.striking::before {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
   }
+  /* The strike still appears and still reads — it simply does not fly in. */
+  .combo-strike { animation: none; opacity: 1; transform: translate(-50%, -50%); }
+  .combo-strike svg { animation: none; opacity: 1; transform: none; }
   .quiz-pip { transition: background-color 1ms linear; }
   .quiz-pip.current { transform: none; }
 }
@@ -525,3 +564,61 @@ textarea:focus { border-color: var(--moss); box-shadow: 0 0 0 3px rgba(53, 106, 
 @media (prefers-reduced-motion: reduce) { .island-travel, .travel-place.arrival { animation: none; } }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
+
+/* --- Motion across the app ------------------------------------------------
+   Small, frequent responses to things the learner actually did: a number that
+   moves when it changes, a stamp that lands, a card that arrives. Everything
+   here is decoration over an already-working interface, and all of it is
+   disabled under prefers-reduced-motion at the end of this file. */
+
+/* A counter that changes should be seen changing. */
+.stat-pop { display: inline-block; animation: stat-pop 460ms var(--ease-out); font-variant-numeric: tabular-nums; }
+@keyframes stat-pop { 0% { transform: translateY(-6px) scale(1.22); color: var(--gold); } 60% { transform: none; } 100% { transform: none; } }
+
+/* The return flame breathes once a run is going. */
+.top-stat svg.ember { animation: ember 2.4s ease-in-out infinite; transform-origin: 50% 80%; }
+@keyframes ember { 0%, 100% { transform: scale(1) rotate(0deg); opacity: .92; } 50% { transform: scale(1.13) rotate(-3deg); opacity: 1; } }
+
+/* Achievements arrive one after another rather than all at once. */
+.unlocked-line { animation: unlocked-in 520ms var(--ease-out) both; }
+@keyframes unlocked-in { 0% { opacity: 0; transform: translateX(-14px) scale(.94); } 60% { opacity: 1; transform: translateX(2px) scale(1.02); } 100% { opacity: 1; transform: none; } }
+
+/* The day's completion stamp lands like a stamp. */
+.completion-stamp { animation: stamp-down 620ms var(--ease-out) both; }
+@keyframes stamp-down { 0% { opacity: 0; transform: scale(2.1) rotate(-16deg); } 55% { opacity: 1; transform: scale(.92) rotate(4deg); } 78% { transform: scale(1.05) rotate(-2deg); } 100% { opacity: 1; transform: none; } }
+
+/* Cards on a view arrive in sequence instead of snapping in together. */
+.view-stack > * { animation: card-rise 480ms var(--ease-out) both; }
+.view-stack > *:nth-child(1) { animation-delay: 20ms; }
+.view-stack > *:nth-child(2) { animation-delay: 80ms; }
+.view-stack > *:nth-child(3) { animation-delay: 140ms; }
+.view-stack > *:nth-child(4) { animation-delay: 200ms; }
+.view-stack > *:nth-child(n+5) { animation-delay: 250ms; }
+@keyframes card-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+/* Buttons answer the press. */
+.primary-button, .hero-button, .text-button { transition: transform 140ms var(--ease-out), box-shadow 140ms var(--ease-out), filter 140ms var(--ease-out); }
+.primary-button:hover, .hero-button:hover { transform: translateY(-2px); filter: brightness(1.04); }
+.primary-button:active, .hero-button:active { transform: translateY(0) scale(.985); }
+
+/* Route markers stamp themselves when the day is done. */
+.island-waypoint.done > span, .path-node.done > span { animation: node-stamp 520ms var(--ease-out) both; }
+@keyframes node-stamp { 0% { transform: scale(.55); } 62% { transform: scale(1.13); } 100% { transform: scale(1); } }
+.island-waypoint.current, .path-node.current { animation: node-beacon 2.6s ease-in-out infinite; }
+@keyframes node-beacon { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--gold) 52%, transparent); } 55% { box-shadow: 0 0 0 9px transparent; } }
+
+/* The course ring draws itself. */
+.course-ring { animation: ring-in 900ms var(--ease-out) both; }
+@keyframes ring-in { from { opacity: 0; transform: scale(.9) rotate(-14deg); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .stat-pop, .top-stat svg.ember, .unlocked-line, .completion-stamp, .course-ring,
+  .view-stack > *,
+  .island-waypoint.done > span, .path-node.done > span,
+  .island-waypoint.current, .path-node.current {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .primary-button:hover, .hero-button:hover, .primary-button:active, .hero-button:active { transform: none; }
+}

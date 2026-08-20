@@ -90,6 +90,9 @@ type AppData = {
   bonusDays: number[];
   /** Island rechecks passed, keyed by phase id. */
   rechecks: Record<number, { score: number; passed: boolean }>;
+  /** Consecutive correct answers, carried across lessons until one is missed. */
+  combo: number;
+  bestCombo: number;
   finalTestComplete: boolean;
 };
 
@@ -103,6 +106,8 @@ const defaultData: AppData = {
   takeaways: {},
   bonusDays: [],
   rechecks: {},
+  combo: 0,
+  bestCombo: 0,
   finalTestComplete: false,
 };
 
@@ -134,6 +139,27 @@ const phaseCompleteCount = (data: AppData, start: number) =>
   data.completedDays.filter((day) => day >= start && day < start + 10).length;
 
 const phaseIdForDay = (day: number) => Math.floor((day - 1) / 10) + 1;
+
+/**
+ * A run of correct answers charges a bolt every fifth one, and the run carries
+ * across lessons. The reward is deliberately small beside the twenty XP for
+ * naming a real action: the course rewards application, and a clean run is a
+ * nice thing to notice, not the point of the exercise.
+ */
+export const COMBO_STRIKE_EVERY = 5;
+export const COMBO_STRIKE_XP = 5;
+
+/** Fold one answer into the journal: combo, best run and any bolt it charges. */
+export function recordAnswer(previous: AppData, correct: boolean): AppData {
+  const combo = correct ? previous.combo + 1 : 0;
+  const struck = correct && combo % COMBO_STRIKE_EVERY === 0;
+  return {
+    ...previous,
+    combo,
+    bestCombo: Math.max(previous.bestCombo ?? 0, combo),
+    xp: previous.xp + (struck ? COMBO_STRIKE_XP : 0),
+  };
+}
 
 /** An island is travelled once all ten of its days are recorded. */
 export const islandTravelled = (data: AppData, phaseId: number) =>
@@ -308,6 +334,10 @@ export default function Home() {
     setView("lesson");
   }
 
+  function answerRecorded(correct: boolean) {
+    setData((previous) => recordAnswer(previous, correct));
+  }
+
   function openRecheck(phaseId: number) {
     setRecheckPhaseId(phaseId);
     setRecheckAnswers({});
@@ -477,8 +507,8 @@ export default function Home() {
           <div className="topbar-spacer" />
           <div className="desktop-theme-control"><ThemeSelector theme={theme} onChange={setTheme} /></div>
           <div className="topbar-stats" aria-label="Your current progress">
-            <div className="top-stat"><Flame aria-hidden="true" /><span>{data.streak}</span><span className="stat-word">returns</span></div>
-            <div className="top-stat xp"><Zap aria-hidden="true" /><span>{data.xp}</span><span className="stat-word">practice marks</span></div>
+            <div className="top-stat"><Flame aria-hidden="true" className={cn(data.streak > 0 && "ember")} /><span className="stat-pop" key={`streak-${data.streak}`}>{data.streak}</span><span className="stat-word">returns</span></div>
+            <div className="top-stat xp"><Zap aria-hidden="true" /><span className="stat-pop" key={`xp-${data.xp}`}>{data.xp}</span><span className="stat-word">practice marks</span></div>
           </div>
           <div className="mobile-menu-wrap">
             <button className="icon-button mobile-menu-button" aria-label="Open menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
@@ -512,6 +542,8 @@ export default function Home() {
               onTakeQuiz={() => { setStage("quiz"); setNotice(""); }}
               onSubmitQuiz={submitQuiz}
               onRetryQuiz={() => { setAnswers({}); setQuizStatus("idle"); setNotice(""); }}
+              onAnswer={answerRecorded}
+              combo={data.combo}
               actionText={actionText}
               setActionText={setActionText}
               takeawayText={takeawayText}
@@ -535,6 +567,8 @@ export default function Home() {
               setAnswers={setRecheckAnswers}
               status={recheckStatus}
               onSubmit={submitRecheck}
+              onAnswer={answerRecorded}
+              combo={data.combo}
               onRetry={() => { setRecheckAnswers({}); setRecheckStatus("idle"); setNotice(""); }}
               onBack={() => chooseView("map")}
               onContinue={() => { const next = recheckPhaseId * 10 + 1; if (next <= 100) openLesson(next); else chooseView("map"); }}
@@ -788,7 +822,7 @@ function TakeawaysView({ data, onStart }: { data: AppData; onStart: () => void }
  * The gate at the end of an island: eight questions drawn across its ten days,
  * so moving on takes the whole stretch rather than the most recent lesson.
  */
-function RecheckView({ phase, data, answers, setAnswers, status, onSubmit, onRetry, onBack, onContinue }: {
+function RecheckView({ phase, data, answers, setAnswers, status, onSubmit, onRetry, onAnswer, combo, onBack, onContinue }: {
   phase: CoursePhase;
   data: AppData;
   answers: Record<number, number>;
@@ -796,6 +830,8 @@ function RecheckView({ phase, data, answers, setAnswers, status, onSubmit, onRet
   status: "idle" | "failed" | "passed";
   onSubmit: () => void;
   onRetry: () => void;
+  onAnswer: (correct: boolean) => void;
+  combo: number;
   onBack: () => void;
   onContinue: () => void;
 }) {
@@ -835,6 +871,8 @@ function RecheckView({ phase, data, answers, setAnswers, status, onSubmit, onRet
             status={status}
             onSubmit={onSubmit}
             onRetry={onRetry}
+            onAnswer={onAnswer}
+            combo={combo}
             submitLabel="Complete the recheck"
           />
         )}
@@ -851,21 +889,28 @@ const prefersReducedMotion = () =>
  * daily knowledge check and the island recheck, which differ only in length
  * and wording.
  */
-function QuizRunner({ questions, answers, setAnswers, status, onSubmit, onRetry, submitLabel }: {
+function QuizRunner({ questions, answers, setAnswers, status, onSubmit, onRetry, onAnswer, combo, submitLabel }: {
   questions: QuizQuestion[];
   answers: Record<number, number>;
   setAnswers: React.Dispatch<React.SetStateAction<Record<number, number>>>;
   status: "idle" | "failed" | "passed";
   onSubmit: () => void;
   onRetry: () => void;
+  onAnswer: (correct: boolean) => void;
+  combo: number;
   submitLabel: string;
 }) {
   const [index, setIndex] = useState(0);
+  const [strike, setStrike] = useState<number | null>(null);
+  const [pulse, setPulse] = useState(0);
   const total = questions.length;
   const question = questions[index];
   const chosen = answers[index];
+  const revealed = chosen !== undefined;
   const answeredCount = questions.filter((_, position) => answers[position] !== undefined).length;
+  const correctCount = questions.filter((item, position) => answers[position] === item.answer).length;
   const isLast = index === total - 1;
+  const allAnswered = answeredCount === total;
 
   if (status === "failed") {
     const missed = questions.map((item, position) => ({ item, position })).filter(({ item, position }) => answers[position] !== item.answer);
@@ -893,25 +938,53 @@ function QuizRunner({ questions, answers, setAnswers, status, onSubmit, onRetry,
   }
 
   function choose(optionIndex: number) {
+    if (revealed) return;
+    const correct = optionIndex === question.answer;
     setAnswers((current) => ({ ...current, [index]: optionIndex }));
-    if (isLast) return;
-    const delay = prefersReducedMotion() ? 0 : 300;
-    window.setTimeout(() => setIndex((current) => (current === index ? Math.min(total - 1, current + 1) : current)), delay);
+    onAnswer(correct);
+    setPulse((current) => current + 1);
+
+    const nextCombo = correct ? combo + 1 : 0;
+    const calm = prefersReducedMotion();
+    if (correct && nextCombo > 0 && nextCombo % COMBO_STRIKE_EVERY === 0) {
+      setStrike(nextCombo);
+      window.setTimeout(() => setStrike(null), calm ? 900 : 1500);
+    }
+    if (!isLast) {
+      // A miss lingers, so the explanation can actually be read.
+      const wait = calm ? 400 : correct ? 950 : 2400;
+      window.setTimeout(() => setIndex((current) => (current === index ? Math.min(total - 1, current + 1) : current)), wait);
+    }
   }
 
   return (
-    <div className="quiz-runner">
+    <div className={cn("quiz-runner", strike !== null && "striking")}>
+      {strike !== null && (
+        <div className="combo-strike" role="status">
+          <svg viewBox="0 0 40 64" aria-hidden="true"><path d="M23 2 6 36h11l-4 26 21-36H23l4-24z" /></svg>
+          <span>{strike} in a row</span>
+          <small>+{COMBO_STRIKE_XP} XP</small>
+        </div>
+      )}
+
       <div className="quiz-track" aria-hidden="true">
         {questions.map((item, position) => (
           <i
             key={item.question}
-            className={cn("quiz-pip", answers[position] !== undefined && "done", position === index && "current")}
+            className={cn(
+              "quiz-pip",
+              answers[position] !== undefined && (answers[position] === item.answer ? "right" : "wrong"),
+              position === index && "current",
+            )}
           />
         ))}
       </div>
+
       <div className="quiz-counter">
         <span>Question {String(index + 1).padStart(2, "0")} of {String(total).padStart(2, "0")}</span>
-        <span>{answeredCount} answered</span>
+        <span className={cn("combo-meter", combo > 0 && "lit", combo >= COMBO_STRIKE_EVERY && "hot")} key={pulse}>
+          <Zap aria-hidden="true" /> {combo > 0 ? `${combo} in a row` : "no run yet"}
+        </span>
       </div>
 
       <fieldset className="quiz-question" key={index}>
@@ -919,7 +992,13 @@ function QuizRunner({ questions, answers, setAnswers, status, onSubmit, onRetry,
         <div className="quiz-options">
           {question.options.map((option, optionIndex) => (
             <label
-              className={cn("answer-option", chosen === optionIndex && "selected")}
+              className={cn(
+                "answer-option",
+                chosen === optionIndex && "selected",
+                revealed && optionIndex === question.answer && "is-right",
+                revealed && chosen === optionIndex && optionIndex !== question.answer && "is-wrong",
+                revealed && "locked",
+              )}
               key={option}
               style={{ animationDelay: `${optionIndex * 55}ms` }}
             >
@@ -927,26 +1006,31 @@ function QuizRunner({ questions, answers, setAnswers, status, onSubmit, onRetry,
                 type="radio"
                 name={`question-${index}`}
                 checked={chosen === optionIndex}
+                disabled={revealed}
                 onChange={() => choose(optionIndex)}
               />
-              <span>{String.fromCharCode(65 + optionIndex)}</span>
+              <span>{revealed && optionIndex === question.answer ? <Check aria-hidden="true" /> : revealed && chosen === optionIndex ? <X aria-hidden="true" /> : String.fromCharCode(65 + optionIndex)}</span>
               <p>{option}</p>
             </label>
           ))}
         </div>
+        {revealed && (
+          <p className={cn("answer-verdict", chosen === question.answer ? "right" : "wrong")}>
+            {question.explanation}
+          </p>
+        )}
       </fieldset>
 
       <div className="quiz-controls">
         <button className="quiz-step" onClick={() => setIndex((current) => Math.max(0, current - 1))} disabled={index === 0}>
           <ArrowLeft aria-hidden="true" /> Back
         </button>
-        {isLast ? (
-          <button className="primary-button" onClick={onSubmit} disabled={answeredCount < total}>
-            {answeredCount < total ? `${total - answeredCount} still unanswered` : submitLabel}
-            <ChevronRight aria-hidden="true" />
+        {allAnswered ? (
+          <button className="primary-button" onClick={onSubmit}>
+            {submitLabel} · {correctCount}/{total} <ChevronRight aria-hidden="true" />
           </button>
         ) : (
-          <button className="quiz-step forward" onClick={() => setIndex((current) => Math.min(total - 1, current + 1))}>
+          <button className="quiz-step forward" onClick={() => setIndex((current) => Math.min(total - 1, current + 1))} disabled={isLast}>
             Next <ChevronRight aria-hidden="true" />
           </button>
         )}
@@ -954,9 +1038,8 @@ function QuizRunner({ questions, answers, setAnswers, status, onSubmit, onRetry,
     </div>
   );
 }
-
-function LessonView({ lesson, stage, answers, setAnswers, quizStatus, onTakeQuiz, onSubmitQuiz, onRetryQuiz, actionText, setActionText, takeawayText, setTakeawayText, bonusDone, setBonusDone, bonusNote, setBonusNote, completed, celebration, onFinish, onBack, onNext }: {
-  lesson: Lesson; stage: LessonStage; answers: Record<number, number>; setAnswers: React.Dispatch<React.SetStateAction<Record<number, number>>>; quizStatus: "idle" | "failed" | "passed"; onTakeQuiz: () => void; onSubmitQuiz: () => void; onRetryQuiz: () => void; actionText: string; setActionText: (value: string) => void; takeawayText: string; setTakeawayText: (value: string) => void; bonusDone: boolean; setBonusDone: (value: boolean) => void; bonusNote: string; setBonusNote: (value: string) => void; completed: boolean; celebration: string[]; onFinish: () => void; onBack: () => void; onNext: () => void;
+function LessonView({ lesson, stage, answers, setAnswers, quizStatus, onTakeQuiz, onSubmitQuiz, onRetryQuiz, onAnswer, combo, actionText, setActionText, takeawayText, setTakeawayText, bonusDone, setBonusDone, bonusNote, setBonusNote, completed, celebration, onFinish, onBack, onNext }: {
+  lesson: Lesson; stage: LessonStage; answers: Record<number, number>; setAnswers: React.Dispatch<React.SetStateAction<Record<number, number>>>; quizStatus: "idle" | "failed" | "passed"; onTakeQuiz: () => void; onSubmitQuiz: () => void; onRetryQuiz: () => void; onAnswer: (correct: boolean) => void; combo: number; actionText: string; setActionText: (value: string) => void; takeawayText: string; setTakeawayText: (value: string) => void; bonusDone: boolean; setBonusDone: (value: boolean) => void; bonusNote: string; setBonusNote: (value: string) => void; completed: boolean; celebration: string[]; onFinish: () => void; onBack: () => void; onNext: () => void;
 }) {
   const quizOpen = stage === "quiz" || stage === "action" || stage === "complete";
   const actionOpen = stage === "action" || stage === "complete";
@@ -972,7 +1055,7 @@ function LessonView({ lesson, stage, answers, setAnswers, quizStatus, onTakeQuiz
           {stage === "read" && <section className="understood-card"><div><span className="eyebrow">READY TO CONTINUE?</span><h2>You’ve learned it.<br />Now prove it.</h2><p>The quiz checks understanding before the day’s action unlocks.</p></div><button className="primary-button" onClick={onTakeQuiz}>Understood — take the quiz <ChevronRight aria-hidden="true" /></button></section>}
 
           {quizOpen && <section className="quiz-area" aria-labelledby="quiz-heading"><div className="quiz-heading"><div><span className="eyebrow">KNOWLEDGE CHECK · +10 XP</span><h2 id="quiz-heading">You’ve learned it. Now prove it.</h2></div>{stage !== "quiz" && <span className="passed-tag"><Check aria-hidden="true" /> Passed</span>}</div>
-            {stage === "quiz" && <QuizRunner questions={lesson.quiz} answers={answers} setAnswers={setAnswers} status={quizStatus} onSubmit={onSubmitQuiz} onRetry={onRetryQuiz} submitLabel="Check my understanding" />}
+            {stage === "quiz" && <QuizRunner questions={lesson.quiz} answers={answers} setAnswers={setAnswers} status={quizStatus} onSubmit={onSubmitQuiz} onRetry={onRetryQuiz} onAnswer={onAnswer} combo={combo} submitLabel="Check my understanding" />}
           </section>}
 
           {actionOpen && <section className="action-area" aria-labelledby="action-heading"><div className="action-heading"><div className="action-icon"><Target aria-hidden="true" /></div><div><span className="eyebrow">TODAY’S ACTION · +20 XP</span><h2 id="action-heading">Now use it.</h2></div></div><p className="action-prompt">{lesson.actionPrompt}</p><p className="action-hint">{lesson.actionHint}</p>{!completed ? <textarea value={actionText} onChange={(event) => setActionText(event.target.value.slice(0, 300))} placeholder="Write the small action you will actually take…" aria-label="Today’s action" maxLength={300} /> : <div className="saved-note"><Check aria-hidden="true" /><p>{actionText}</p></div>}
@@ -981,7 +1064,7 @@ function LessonView({ lesson, stage, answers, setAnswers, quizStatus, onTakeQuiz
 
           {actionOpen && <section className="bonus-area"><div><span className="eyebrow">OPTIONAL HARD BONUS · +60 XP</span><h2>Push the idea into real life.</h2><p>{lesson.bonus}</p></div>{!completed ? <label className="bonus-toggle"><input type="checkbox" checked={bonusDone} onChange={(event) => setBonusDone(event.target.checked)} /><span><Check aria-hidden="true" /></span>I completed the hard bonus</label> : bonusDone ? <span className="bonus-earned"><Sparkles aria-hidden="true" /> Hard bonus recorded</span> : <span className="bonus-skip">Bonus skipped — the core day still counts.</span>}{bonusDone && !completed && <textarea value={bonusNote} onChange={(event) => setBonusNote(event.target.value.slice(0, 180))} placeholder="How did you apply the challenge?" aria-label="Hard bonus reflection" maxLength={180} />}</section>}
           {actionOpen && !completed && <button className="complete-button" onClick={onFinish}><span><Check aria-hidden="true" /></span> Complete Day {lesson.day}<small>Quiz + action required</small></button>}
-          {completed && <section className="completion-card"><div className="completion-stamp"><Check aria-hidden="true" /></div><div><span className="eyebrow">DAY RECORDED</span><h2>{lesson.day === 100 ? "100 days complete. Your practice continues." : "One honest step travelled."}</h2><p>{lesson.day === 100 ? "Keep the method: learn, prove, act, reflect, and return." : "The reward is not the points—it is the part you carry into your real life."}</p>{celebration.map((item) => <span className="unlocked-line" key={item}><Award aria-hidden="true" /> Achievement unlocked: {item}</span>)}</div><button className="primary-button" onClick={onNext}>{lesson.day === 100 ? "Return to your field guide" : "Continue the journey"}<ChevronRight aria-hidden="true" /></button></section>}
+          {completed && <section className="completion-card"><div className="completion-stamp"><Check aria-hidden="true" /></div><div><span className="eyebrow">DAY RECORDED</span><h2>{lesson.day === 100 ? "100 days complete. Your practice continues." : "One honest step travelled."}</h2><p>{lesson.day === 100 ? "Keep the method: learn, prove, act, reflect, and return." : "The reward is not the points—it is the part you carry into your real life."}</p>{celebration.map((item, position) => <span className="unlocked-line" key={item} style={{ animationDelay: `${240 + position * 160}ms` }}><Award aria-hidden="true" /> Achievement unlocked: {item}</span>)}</div><button className="primary-button" onClick={onNext}>{lesson.day === 100 ? "Return to your field guide" : "Continue the journey"}<ChevronRight aria-hidden="true" /></button></section>}
         </article>
         <aside className="lesson-margin"><div className="margin-progress"><span>DAY {String(lesson.day).padStart(2, "0")}</span><div><i style={{ height: `${Math.max(8, lesson.day)}%` }} /></div><span>100</span></div><div className="margin-note"><span>REMEMBER</span><p>Learning only matters when it changes how you live.</p></div><div className="xp-note"><Zap aria-hidden="true" /><span><strong>+{lesson.quiz.length ? 10 : 0} XP</strong> for understanding<br /><strong>+20 XP</strong> for action</span></div></aside>
       </div>
