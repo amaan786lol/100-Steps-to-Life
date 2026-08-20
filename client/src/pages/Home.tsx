@@ -147,7 +147,17 @@ const phaseIdForDay = (day: number) => Math.floor((day - 1) / 10) + 1;
  * nice thing to notice, not the point of the exercise.
  */
 export const COMBO_STRIKE_EVERY = 5;
-export const COMBO_STRIKE_XP = 5;
+const COMBO_STRIKE_BASE = 8;
+const COMBO_STRIKE_STEP = 2;
+/** No single bolt may outweigh naming a real action, which is worth 20. */
+export const COMBO_STRIKE_CAP = 18;
+
+/** What the bolt charged at this run length is worth. Later bolts pay more. */
+export function strikeValue(combo: number) {
+  const tier = Math.floor(combo / COMBO_STRIKE_EVERY);
+  if (tier < 1) return 0;
+  return Math.min(COMBO_STRIKE_BASE + (tier - 1) * COMBO_STRIKE_STEP, COMBO_STRIKE_CAP);
+}
 
 /** Fold one answer into the journal: combo, best run and any bolt it charges. */
 export function recordAnswer(previous: AppData, correct: boolean): AppData {
@@ -157,7 +167,7 @@ export function recordAnswer(previous: AppData, correct: boolean): AppData {
     ...previous,
     combo,
     bestCombo: Math.max(previous.bestCombo ?? 0, combo),
-    xp: previous.xp + (struck ? COMBO_STRIKE_XP : 0),
+    xp: previous.xp + (struck ? strikeValue(combo) : 0),
   };
 }
 
@@ -528,7 +538,7 @@ export default function Home() {
         <div id="main-content" className="main-content" tabIndex={-1}>
           {notice && <div className="notice" role="status"><CircleHelp aria-hidden="true" />{notice}</div>}
           {view === "today" && <TodayView data={data} lesson={todayLesson} coursePercent={coursePercent} onStart={startToday} onMap={() => chooseView("map")} onAchievements={() => chooseView("achievements")} account={{ loading: authLoading, signedIn: isAuthenticated, name: user?.name ?? undefined, hasBackup: Boolean(backupQuery.data), saving: backupMutation.isPending }} onSignIn={() => startLogin()} onSaveBackup={saveBackup} onRestoreBackup={restoreBackup} onLogout={logout} />}
-          {view === "map" && <CourseMap data={data} onOpen={openLesson} onFinal={openFinalTest} />}
+          {view === "map" && <CourseMap data={data} onOpen={openLesson} onFinal={openFinalTest} onRecheck={openRecheck} />}
           {view === "achievements" && <AchievementsView achievements={achievements} data={data} />}
           {view === "progress" && <ProgressView data={data} coursePercent={coursePercent} accuracy={accuracy} />}
           {view === "takeaways" && <TakeawaysView data={data} onStart={startToday} />}
@@ -732,7 +742,7 @@ function AccountBackup({ account, onSignIn, onSaveBackup, onRestoreBackup, onLog
   return <section className="account-backup"><div className="backup-icon"><WifiOff aria-hidden="true" /></div><div className="backup-copy"><span className="eyebrow">YOUR JOURNAL, YOUR DEVICE</span><h2>Works offline.<br /><em>Back up when ready.</em></h2><p>Your progress, actions, and reflections save on this device first. Sign in only when you want a private backup to restore on another device.</p></div><div className="backup-actions">{account.loading ? <span className="backup-status">Checking your journal…</span> : !account.signedIn ? <><button className="primary-button" onClick={onSignIn}><LogIn aria-hidden="true" /> Sign in to back up</button><small><Cloud aria-hidden="true" /> Offline progress stays available either way.</small></> : <><span className="backup-status"><Check aria-hidden="true" /> Signed in{account.name ? ` as ${account.name}` : ""}</span><button className="primary-button" onClick={onSaveBackup} disabled={account.saving}><Upload aria-hidden="true" /> {account.saving ? "Saving backup…" : "Save private backup"}</button>{account.hasBackup && <button className="backup-secondary" onClick={onRestoreBackup}><Download aria-hidden="true" /> Restore saved journal</button>}<button className="backup-text" onClick={onLogout}>Sign out</button></>}</div></section>;
 }
 
-function CourseMap({ data, onOpen, onFinal }: { data: AppData; onOpen: (day: number) => void; onFinal: () => void }) {
+function CourseMap({ data, onOpen, onFinal, onRecheck }: { data: AppData; onOpen: (day: number) => void; onFinal: () => void; onRecheck: (phaseId: number) => void }) {
   const fullRouteComplete = data.completedDays.length === 100;
   const activeIslandId = Math.min(10, Math.floor((Math.max(1, data.currentDay) - 1) / 10) + 1);
   return (
@@ -756,7 +766,9 @@ function CourseMap({ data, onOpen, onFinal }: { data: AppData; onOpen: (day: num
               <div className="island-progress"><span>{count}/10</span><i style={{ width: `${count * 10}%` }} /></div>
             </div>
             <div className="island-route"><div className="route-copy"><span className="eyebrow">{phase.title}</span><p>{phase.memoryCue}</p></div><div className="island-waypoints" aria-label={`${phase.island} lesson waypoints`}>{Array.from({ length: 10 }, (_, index) => { const day = start + index; const done = data.completedDays.includes(day); const current = day === data.currentDay && !done; const unlocked = day <= data.currentDay || done; const className = cn("island-waypoint", done && "done", current && "current", !unlocked && "locked"); const label = `Day ${day}: ${getLesson(day).title}${done ? ", complete" : current ? ", current" : !unlocked ? ", locked" : ""}`; return unlocked ? <button key={day} className={className} onClick={() => onOpen(day)} aria-label={label}><span>{done ? <Check aria-hidden="true" /> : String(day).padStart(2, "0")}</span>{current && <small>{getLesson(day).title}</small>}</button> : <span key={day} className={className} aria-label={label}><span><Lock aria-hidden="true" /></span></span>; })}</div></div>
-            {complete && phase.id < 10 && <div className="island-passage"><span>Passage charted</span><ChevronRight aria-hidden="true" /></div>}
+            {complete && (recheckPassed(data, phase.id)
+              ? <div className="island-passage"><Check aria-hidden="true" /><span>{phase.id < 10 ? "Passage charted" : "Island secured"}</span></div>
+              : <button className="island-passage pending" onClick={() => onRecheck(phase.id)}><Zap aria-hidden="true" /><span>Recheck waiting — {RECHECK_LENGTH} questions to open the passage</span><ChevronRight aria-hidden="true" /></button>)}
           </article>;
         })}
       </section>
@@ -797,6 +809,8 @@ function ProgressView({ data, coursePercent, accuracy }: { data: AppData; course
     { label: "Understanding", value: `${accuracy}%`, sub: "quiz accuracy", icon: BookOpen, tone: "sky" },
     { label: "Actions named", value: `${Object.keys(data.actions).length}`, sub: "real-life steps", icon: Target, tone: "clay" },
     { label: "Hard bonuses", value: `${data.bonusDays.length}`, sub: "optional challenges", icon: Sparkles, tone: "gold" },
+    { label: "Best run", value: `${data.bestCombo ?? 0}`, sub: "answers in a row", icon: Zap, tone: "gold" },
+    { label: "Islands secured", value: `${Object.values(data.rechecks ?? {}).filter((entry) => entry.passed).length}`, sub: "rechecks passed", icon: Mountain, tone: "moss" },
   ];
   return (
     <div className="view-stack">
@@ -963,7 +977,7 @@ function QuizRunner({ questions, answers, setAnswers, status, onSubmit, onRetry,
         <div className="combo-strike" role="status">
           <svg viewBox="0 0 40 64" aria-hidden="true"><path d="M23 2 6 36h11l-4 26 21-36H23l4-24z" /></svg>
           <span>{strike} in a row</span>
-          <small>+{COMBO_STRIKE_XP} XP</small>
+          <small>+{strikeValue(strike)} XP</small>
         </div>
       )}
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COMBO_STRIKE_EVERY, COMBO_STRIKE_XP, calculateAccuracy, completeDay, newlyUnlocked, recordAnswer } from "./Home";
+import { COMBO_STRIKE_CAP, COMBO_STRIKE_EVERY, calculateAccuracy, completeDay, newlyUnlocked, recordAnswer, strikeValue } from "./Home";
 import { getLesson } from "../data/course";
 
 const blank = {
@@ -146,29 +146,40 @@ describe("recordAnswer", () => {
 
   it("charges a bolt every fifth correct answer, and only then", () => {
     for (let i = 1; i < COMBO_STRIKE_EVERY; i++) expect(runOf(i).xp).toBe(0);
-    expect(runOf(COMBO_STRIKE_EVERY).xp).toBe(COMBO_STRIKE_XP);
-    expect(runOf(COMBO_STRIKE_EVERY * 2).xp).toBe(COMBO_STRIKE_XP * 2);
-    expect(runOf(COMBO_STRIKE_EVERY * 2 + 1).xp).toBe(COMBO_STRIKE_XP * 2);
+    expect(runOf(COMBO_STRIKE_EVERY).xp).toBe(strikeValue(COMBO_STRIKE_EVERY));
+    // The extra answer past a bolt pays nothing more until the next one.
+    expect(runOf(COMBO_STRIKE_EVERY + 1).xp).toBe(strikeValue(COMBO_STRIKE_EVERY));
+  });
+
+  it("pays more the longer the run gets, up to a cap", () => {
+    const first = strikeValue(COMBO_STRIKE_EVERY);
+    const second = strikeValue(COMBO_STRIKE_EVERY * 2);
+    const third = strikeValue(COMBO_STRIKE_EVERY * 3);
+    expect(second).toBeGreaterThan(first);
+    expect(third).toBeGreaterThan(second);
+    expect(strikeValue(COMBO_STRIKE_EVERY * 50)).toBe(COMBO_STRIKE_CAP);
+    expect(strikeValue(0)).toBe(0);
+    expect(strikeValue(COMBO_STRIKE_EVERY - 1)).toBe(0);
   });
 
   it("resets the run on a miss without taking anything away", () => {
     const missed = recordAnswer(runOf(7), false);
     expect(missed.combo).toBe(0);
-    expect(missed.xp).toBe(COMBO_STRIKE_XP);   // the bolt already earned stays
-    expect(missed.bestCombo).toBe(7);          // and so does the best run
+    expect(missed.xp).toBe(strikeValue(COMBO_STRIKE_EVERY));  // the bolt earned stays
+    expect(missed.bestCombo).toBe(7);                         // and so does the best run
   });
 
   it("carries the run across lessons", () => {
     // Four right at the end of one lesson, one right at the start of the next.
     const carried = recordAnswer(runOf(4), true);
     expect(carried.combo).toBe(COMBO_STRIKE_EVERY);
-    expect(carried.xp).toBe(COMBO_STRIKE_XP);
+    expect(carried.xp).toBe(strikeValue(COMBO_STRIKE_EVERY));
   });
 
-  it("keeps combo rewards small beside naming a real action", () => {
-    // A flawless fifteen-question island pays less than one completed day.
-    const flawless = runOf(15).xp;
-    const oneDay = completeDay(blank, day()).xp;
-    expect(flawless).toBeLessThan(oneDay);
+  it("never lets one bolt outweigh naming a real action", () => {
+    // The course rewards application first: no run length may make a quiz
+    // answer worth more than the twenty XP for a real step.
+    const oneAction = completeDay(blank, day()).xp;
+    for (const run of [5, 10, 25, 100, 500]) expect(strikeValue(run)).toBeLessThan(oneAction);
   });
 });
