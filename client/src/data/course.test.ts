@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FINAL_RECALL_LENGTH, RECHECK_LENGTH, buildFinalRecall, buildRecheck, buildTrial, finalScenarios, finalTrials, getLesson, lessons, lessonsForPhase, passMark, phases, questionCountForPhase } from "./course";
+import { FINAL_RECALL_LENGTH, reviewSlotsFor, totalQuestionsForDay, RECHECK_LENGTH, buildFinalRecall, buildRecheck, buildTrial, finalScenarios, finalTrials, getLesson, lessons, lessonsForPhase, passMark, phases, questionCountForPhase } from "./course";
 
 describe("Hundred Steps island course map", () => {
   it("has ten distinct island learning environments", () => {
@@ -25,10 +25,19 @@ describe("quiz depth", () => {
     }
   });
 
-  it("gives every lesson the length its island calls for", () => {
+  it("gives every day the length its island calls for, once review is added", () => {
     for (const lesson of lessons) {
-      expect(lesson.quiz).toHaveLength(questionCountForPhase(lesson.phase.id));
+      // lesson.quiz holds the fixed part; review is chosen at run time from
+      // whatever the learner has actually forgotten.
+      expect(totalQuestionsForDay(lesson.day)).toBe(questionCountForPhase(lesson.phase.id));
+      expect(lesson.quiz.length).toBe(questionCountForPhase(lesson.phase.id) - reviewSlotsFor(lesson.day, lesson.phase.id));
     }
+  });
+
+  it("brings back more of the course as it goes on", () => {
+    expect(reviewSlotsFor(1, 1)).toBe(0);
+    expect(reviewSlotsFor(2, 1)).toBeGreaterThan(0);
+    expect(reviewSlotsFor(100, 10)).toBeGreaterThan(reviewSlotsFor(2, 1));
   });
 
   it("builds well-formed questions with no repeats inside a quiz", () => {

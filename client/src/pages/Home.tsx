@@ -39,7 +39,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { RECHECK_LENGTH, buildRecheck, buildTrial, finalTrials, getLesson, lessons, passMark, phases, type CoursePhase, type Lesson, type QuizQuestion } from "../data/course";
+import { RECHECK_LENGTH, buildRecheck, buildTrial, finalTrials, getLesson, lessons, passMark, phases, reviewSlotsFor, selectReview, totalQuestionsForDay, type CoursePhase, type Lesson, type QuizQuestion, type RecallRecord } from "../data/course";
 
 const STORAGE_KEY = "hundred-steps-to-life-v1";
 const THEME_STORAGE_KEY = "hundred-steps-to-life-theme";
@@ -62,7 +62,7 @@ const ISLAND_IMAGES: Record<number, string> = {
   10: "/media/island-summit.svg",
 };
 
-type View = "today" | "map" | "achievements" | "progress" | "takeaways" | "lesson" | "recheck" | "final";
+type View = "today" | "map" | "achievements" | "progress" | "takeaways" | "lesson" | "recheck" | "practice" | "final";
 type LessonStage = "read" | "quiz" | "action" | "complete";
 type QuizResult = { score: number; passed: boolean; perfect: boolean };
 type Theme = "morning" | "night" | "green";
@@ -95,6 +95,8 @@ type AppData = {
   bestCombo: number;
   /** Summit trials passed, by index. */
   trialsPassed: number[];
+  /** How well each earlier day's material has held up when it came back. */
+  recall: Record<number, RecallRecord>;
   finalTestComplete: boolean;
 };
 
@@ -111,6 +113,7 @@ const defaultData: AppData = {
   combo: 0,
   bestCombo: 0,
   trialsPassed: [],
+  recall: {},
   finalTestComplete: false,
 };
 
@@ -150,15 +153,29 @@ export function strikeValue(combo: number) {
 }
 
 /** Fold one answer into the journal: combo, best run and any bolt it charges. */
-export function recordAnswer(previous: AppData, correct: boolean): AppData {
+export function recordAnswer(previous: AppData, correct: boolean, source?: { fromDay?: number; onDay?: number }): AppData {
   const combo = correct ? previous.combo + 1 : 0;
   const struck = correct && combo % COMBO_STRIKE_EVERY === 0;
-  return {
+  const next: AppData = {
     ...previous,
     combo,
     bestCombo: Math.max(previous.bestCombo ?? 0, combo),
     xp: previous.xp + (struck ? strikeValue(combo) : 0),
   };
+  // A question that came back from an earlier day tells us how that day is
+  // holding up, which is what decides when it comes back again.
+  if (source?.fromDay) {
+    const before = previous.recall?.[source.fromDay] ?? { seen: 0, missed: 0 };
+    next.recall = {
+      ...(previous.recall ?? {}),
+      [source.fromDay]: {
+        seen: before.seen + 1,
+        missed: before.missed + (correct ? 0 : 1),
+        lastReviewedDay: source.onDay ?? before.lastReviewedDay,
+      },
+    };
+  }
+  return next;
 }
 
 /** An island is travelled once all ten of its days are recorded. */
@@ -178,7 +195,7 @@ export function calculateAccuracy(data: AppData) {
   if (!entries.length) return 0;
   // Ask each lesson how many questions it holds rather than assuming a fixed
   // number, so a lesson with a longer or shorter quiz still scores correctly.
-  const asked = entries.reduce((total, [day]) => total + getLesson(Number(day)).quiz.length, 0);
+  const asked = entries.reduce((total, [day]) => total + totalQuestionsForDay(Number(day)), 0);
   if (!asked) return 0;
   const correct = entries.reduce((total, [, result]) => total + result.score, 0);
   return Math.round((correct / asked) * 100);
@@ -209,6 +226,37 @@ export function completeDay(
     takeaways: input.takeaway ? { ...previous.takeaways, [input.day]: input.takeaway } : previous.takeaways,
     bonusDays: receivedBonus ? [...previous.bonusDays, input.day] : previous.bonusDays,
   };
+}
+
+/**
+ * How well an earlier day is holding up, from how it has answered when it came
+ * back. Deliberately coarse: this is meant to point at what to practise, not to
+ * grade the learner.
+ */
+export type Strength = "unseen" | "shaky" | "holding" | "strong";
+
+export function recallStrength(record: RecallRecord | undefined): Strength {
+  if (!record || record.seen === 0) return "unseen";
+  const hits = record.seen - record.missed;
+  if (record.missed > 0 && record.missed * 2 >= record.seen) return "shaky";
+  if (hits >= 3 && record.missed === 0) return "strong";
+  return "holding";
+}
+
+export const strengthLabel: Record<Strength, string> = {
+  unseen: "Not revisited yet",
+  shaky: "Needs another pass",
+  holding: "Holding",
+  strong: "Strong",
+};
+
+/** Days that have come back and not held, weakest first. */
+export function weakestDays(data: AppData, limit = 12) {
+  return data.completedDays
+    .map((day) => ({ day, strength: recallStrength(data.recall?.[day]), record: data.recall?.[day] }))
+    .filter((entry) => entry.strength === "shaky" || entry.strength === "unseen")
+    .sort((a, b) => (b.record?.missed ?? 0) - (a.record?.missed ?? 0) || a.day - b.day)
+    .slice(0, limit);
 }
 
 /** Titles of achievements unlocked by moving from one journal state to the next. */
@@ -261,6 +309,10 @@ export default function Home() {
   const [finalAnswers, setFinalAnswers] = useState<Record<number, number>>({});
   const [finalStatus, setFinalStatus] = useState<"idle" | "failed" | "passed">("idle");
   const [activeTrial, setActiveTrial] = useState<number | null>(null);
+  const [activeQuiz, setActiveQuiz] = useState<QuizQuestion[]>([]);
+  const [practiceQuiz, setPracticeQuiz] = useState<QuizQuestion[]>([]);
+  const [practiceAnswers, setPracticeAnswers] = useState<Record<number, number>>({});
+  const [practiceDone, setPracticeDone] = useState(false);
   const backupQuery = trpc.progress.get.useQuery(undefined, { enabled: isAuthenticated, retry: false });
   const backupMutation = trpc.progress.save.useMutation({
     onSuccess: () => {
@@ -323,6 +375,11 @@ export default function Home() {
       return;
     }
     const previousQuiz = data.quizHistory[day];
+    const lessonForDay = getLesson(day);
+    setActiveQuiz([
+      ...lessonForDay.quiz,
+      ...selectReview(day, reviewSlotsFor(day, lessonForDay.phase.id), data.recall ?? {}, data.completedDays),
+    ]);
     setSelectedDay(day);
     setStage(data.completedDays.includes(day) ? "complete" : previousQuiz?.passed ? "action" : "read");
     setAnswers({});
@@ -335,8 +392,27 @@ export default function Home() {
     setView("lesson");
   }
 
-  function answerRecorded(correct: boolean) {
-    setData((previous) => recordAnswer(previous, correct));
+  function answerRecorded(correct: boolean, question?: QuizQuestion) {
+    setData((previous) => recordAnswer(previous, correct, { fromDay: question?.fromDay, onDay: selectedDay }));
+  }
+
+  function openPractice() {
+    const weakest = weakestDays(data);
+    const questions = selectReview(
+      Math.max(2, data.currentDay),
+      Math.min(8, Math.max(1, weakest.length || data.completedDays.length)),
+      data.recall ?? {},
+      data.completedDays,
+    );
+    if (!questions.length) {
+      setNotice("Complete a day first — practice draws on the route you have already travelled.");
+      return;
+    }
+    setPracticeQuiz(questions);
+    setPracticeAnswers({});
+    setPracticeDone(false);
+    setMenuOpen(false);
+    setView("practice");
   }
 
   function openRecheck(phaseId: number) {
@@ -377,9 +453,9 @@ export default function Home() {
       setNotice("Answer every question before checking your understanding.");
       return;
     }
-    const score = lesson.quiz.reduce((total, question, index) => total + (answers[index] === question.answer ? 1 : 0), 0);
-    const passed = score >= passMark(lesson.quiz.length);
-    const perfect = score === lesson.quiz.length;
+    const score = activeQuiz.reduce((total, question, index) => total + (answers[index] === question.answer ? 1 : 0), 0);
+    const passed = score >= passMark(activeQuiz.length);
+    const perfect = score === activeQuiz.length;
     if (!passed) {
       setQuizStatus("failed");
       setNotice("Not quite. Review the key idea and example, then try again. Understanding comes first.");
@@ -554,11 +630,12 @@ export default function Home() {
           {view === "today" && <TodayView data={data} lesson={todayLesson} coursePercent={coursePercent} onStart={startToday} onMap={() => chooseView("map")} onAchievements={() => chooseView("achievements")} account={{ loading: authLoading, signedIn: isAuthenticated, name: user?.name ?? undefined, hasBackup: Boolean(backupQuery.data), saving: backupMutation.isPending }} onSignIn={() => startLogin()} onSaveBackup={saveBackup} onRestoreBackup={restoreBackup} onLogout={logout} />}
           {view === "map" && <CourseMap data={data} onOpen={openLesson} onFinal={openFinalTest} onRecheck={openRecheck} />}
           {view === "achievements" && <AchievementsView achievements={achievements} data={data} />}
-          {view === "progress" && <ProgressView data={data} coursePercent={coursePercent} accuracy={accuracy} />}
+          {view === "progress" && <ProgressView data={data} coursePercent={coursePercent} accuracy={accuracy} onPractise={openPractice} />}
           {view === "takeaways" && <TakeawaysView data={data} onStart={startToday} />}
           {view === "lesson" && (
             <LessonView
               lesson={lesson}
+              quiz={activeQuiz}
               stage={stage}
               answers={answers}
               setAnswers={setAnswers}
@@ -596,6 +673,19 @@ export default function Home() {
               onRetry={() => { setRecheckAnswers({}); setRecheckStatus("idle"); setNotice(""); }}
               onBack={() => chooseView("map")}
               onContinue={() => { const next = recheckPhaseId * 10 + 1; if (next <= 100) openLesson(next); else chooseView("map"); }}
+            />
+          )}
+          {view === "practice" && (
+            <PracticeView
+              questions={practiceQuiz}
+              answers={practiceAnswers}
+              setAnswers={setPracticeAnswers}
+              done={practiceDone}
+              onSubmit={() => setPracticeDone(true)}
+              onAgain={openPractice}
+              onAnswer={answerRecorded}
+              combo={data.combo}
+              onBack={() => chooseView("progress")}
             />
           )}
           {view === "final" && <SummitQuest data={data} activeTrial={activeTrial} answers={finalAnswers} setAnswers={setFinalAnswers} status={finalStatus} onOpenTrial={openTrial} onSubmit={submitTrial} onRetry={() => { setFinalAnswers({}); setFinalStatus("idle"); setNotice(""); }} onAnswer={answerRecorded} combo={data.combo} onLeaveTrial={() => { setActiveTrial(null); setFinalStatus("idle"); }} onBack={() => chooseView("map")} />}
@@ -795,6 +885,62 @@ function IslandTravelTransition({ transition, onSkip }: { transition: TravelTran
 }
 
 /**
+ * Practice. Not a gate and not worth XP of its own: it exists so the material
+ * that has not held can be worked on deliberately, rather than only when a
+ * lesson happens to serve it.
+ */
+function PracticeView({ questions, answers, setAnswers, done, onSubmit, onAgain, onAnswer, combo, onBack }: {
+  questions: QuizQuestion[];
+  answers: Record<number, number>;
+  setAnswers: React.Dispatch<React.SetStateAction<Record<number, number>>>;
+  done: boolean;
+  onSubmit: () => void;
+  onAgain: () => void;
+  onAnswer: (correct: boolean, question?: QuizQuestion) => void;
+  combo: number;
+  onBack: () => void;
+}) {
+  const right = questions.filter((question, index) => answers[index] === question.answer).length;
+  const days = Array.from(new Set(questions.map((question) => question.fromDay).filter((day): day is number => typeof day === "number"))).sort((a, b) => a - b);
+  return (
+    <div className="final-test-shell">
+      <section className="trial-run-head">
+        <button className="back-button" onClick={onBack}><ArrowLeft aria-hidden="true" /> Back to progress</button>
+        <span className="eyebrow">PRACTICE · NO SCORE KEPT</span>
+        <h1>Strengthen what slipped.</h1>
+        <p>{questions.length} questions from the days that have not held: {days.map((day) => `Day ${day}`).join(", ")}. Nothing here is graded — it is here to be got wrong until it is not.</p>
+      </section>
+      <section className="recheck-body">
+        {done ? (
+          <div className="recheck-complete">
+            <div className="recheck-seal"><RotateCcw aria-hidden="true" /></div>
+            <span className="eyebrow">PRACTICE DONE</span>
+            <h2>{right} of {questions.length} came back.</h2>
+            <p>Every answer here updated how soon this material returns in your daily checks. What you missed will come back sooner.</p>
+            <div className="practice-actions">
+              <button className="primary-button" onClick={onAgain}>Practise again <ChevronRight aria-hidden="true" /></button>
+              <button className="quiz-step" onClick={onBack}>Back to progress</button>
+            </div>
+          </div>
+        ) : (
+          <QuizRunner
+            questions={questions}
+            answers={answers}
+            setAnswers={setAnswers}
+            status="idle"
+            onSubmit={onSubmit}
+            onRetry={() => undefined}
+            onAnswer={onAnswer}
+            combo={combo}
+            submitLabel="Finish practice"
+          />
+        )}
+      </section>
+    </div>
+  );
+}
+
+/**
  * The Summit quest. Two trials taken in order: recall across every island,
  * then judgment with no lesson in front of you. Both run through the same
  * paginated check the rest of the course uses, so the capstone behaves like
@@ -809,7 +955,7 @@ function SummitQuest({ data, activeTrial, answers, setAnswers, status, onOpenTri
   onOpenTrial: (trial: number) => void;
   onSubmit: () => void;
   onRetry: () => void;
-  onAnswer: (correct: boolean) => void;
+  onAnswer: (correct: boolean, question?: QuizQuestion) => void;
   combo: number;
   onLeaveTrial: () => void;
   onBack: () => void;
@@ -913,7 +1059,7 @@ function AchievementsView({ achievements, data }: { achievements: ReturnType<typ
   );
 }
 
-function ProgressView({ data, coursePercent, accuracy }: { data: AppData; coursePercent: number; accuracy: number }) {
+function ProgressView({ data, coursePercent, accuracy, onPractise }: { data: AppData; coursePercent: number; accuracy: number; onPractise: () => void }) {
   const stats = [
     { label: "Steps travelled", value: `${data.completedDays.length}`, sub: "of 100 days", icon: Footprints, tone: "moss" },
     { label: "Understanding", value: `${accuracy}%`, sub: "quiz accuracy", icon: BookOpen, tone: "sky" },
@@ -927,8 +1073,53 @@ function ProgressView({ data, coursePercent, accuracy }: { data: AppData; course
       <section className="view-heading progress-title"><div><span className="eyebrow">YOUR FIELD RECORD</span><h1>Progress that<br /><em>means something.</em></h1><p>The important number is not XP. It is how often learning became a useful action.</p></div><div className="course-ring" style={{ "--progress": `${coursePercent * 3.6}deg` } as React.CSSProperties}><strong>{coursePercent}%</strong><span>course</span></div></section>
       <section className="stat-grid">{stats.map(({ label, value, sub, icon: Icon, tone }) => <article className="stat-card" key={label}><div className={cn("mini-icon", tone)}><Icon aria-hidden="true" /></div><p>{label}</p><h2>{value}</h2><span>{sub}</span></article>)}</section>
       <section className="paper-card phase-progress-card"><div className="card-heading"><div><span className="eyebrow">TEN PHASES</span><h2>Your route through the course</h2></div><span className="route-small-label">{data.completedDays.length}/100</span></div><div className="phase-bars">{phases.map((phase, index) => { const count = phaseCompleteCount(data, index * 10 + 1); return <div className="phase-bar-row" key={phase.id}><div><span className={cn("phase-dot", phase.color)} /><p>{phase.shortTitle}</p></div><div className="phase-progress-track"><span className={cn("phase-progress-fill", phase.color)} style={{ width: `${count * 10}%` }} /></div><small>{count}/10</small></div>; })}</div></section>
+      <RetentionRecord data={data} onPractise={onPractise} />
       <section className="reflection-card"><div><span className="eyebrow-light">REMEMBER</span><h2>“The route line moves because you moved.”</h2><p>If a day was missed, return to the current waypoint. Your path has not disappeared.</p></div><RotateCcw aria-hidden="true" /></section>
     </div>
+  );
+}
+
+/**
+ * What the hundred days actually left behind. Built from how earlier material
+ * answered when it came back, not from how many days were ticked off.
+ */
+function RetentionRecord({ data, onPractise }: { data: AppData; onPractise: () => void }) {
+  const days = data.completedDays;
+  const counts = { strong: 0, holding: 0, shaky: 0, unseen: 0 } as Record<Strength, number>;
+  for (const day of days) counts[recallStrength(data.recall?.[day])] += 1;
+  const weak = weakestDays(data, 4);
+
+  return (
+    <section className="paper-card retention-card">
+      <div className="card-heading">
+        <div><span className="eyebrow">WHAT HAS HELD</span><h2>Retention, not completion</h2></div>
+        <span className="route-small-label">{days.length} days behind you</span>
+      </div>
+
+      {days.length === 0 ? (
+        <p className="retention-empty">Complete a day, and the material will start coming back in later checks. What you remember then is what shows up here.</p>
+      ) : (
+        <>
+          <div className="retention-legend">
+            {(["strong", "holding", "shaky", "unseen"] as Strength[]).map((key) => (
+              <span key={key} className={cn("retention-key", key)}><i /> {strengthLabel[key]} · {counts[key]}</span>
+            ))}
+          </div>
+          <div className="retention-grid" aria-label="Recall strength for each completed day">
+            {days.map((day) => {
+              const strength = recallStrength(data.recall?.[day]);
+              return <span key={day} className={cn("retention-cell", strength)} title={`Day ${day}: ${strengthLabel[strength]}`}>{day}</span>;
+            })}
+          </div>
+          {weak.length > 0 && (
+            <div className="retention-weak">
+              <p><strong>{weak.map((entry) => entry.day).sort((a, b) => a - b).map((day) => `Day ${day}`).join(", ")}</strong> {weak.length === 1 ? "has" : "have"} not held so far. They will come back sooner in your daily checks.</p>
+              <button className="primary-button" onClick={onPractise}><RotateCcw aria-hidden="true" /> Practise these now</button>
+            </div>
+          )}
+        </>
+      )}
+    </section>
   );
 }
 
@@ -954,7 +1145,7 @@ function RecheckView({ phase, data, answers, setAnswers, status, onSubmit, onRet
   status: "idle" | "failed" | "passed";
   onSubmit: () => void;
   onRetry: () => void;
-  onAnswer: (correct: boolean) => void;
+  onAnswer: (correct: boolean, question?: QuizQuestion) => void;
   combo: number;
   onBack: () => void;
   onContinue: () => void;
@@ -1020,7 +1211,7 @@ function QuizRunner({ questions, answers, setAnswers, status, onSubmit, onRetry,
   status: "idle" | "failed" | "passed";
   onSubmit: () => void;
   onRetry: () => void;
-  onAnswer: (correct: boolean) => void;
+  onAnswer: (correct: boolean, question?: QuizQuestion) => void;
   combo: number;
   submitLabel: string;
 }) {
@@ -1065,7 +1256,7 @@ function QuizRunner({ questions, answers, setAnswers, status, onSubmit, onRetry,
     if (revealed) return;
     const correct = optionIndex === question.answer;
     setAnswers((current) => ({ ...current, [index]: optionIndex }));
-    onAnswer(correct);
+    onAnswer(correct, question);
     setPulse((current) => current + 1);
 
     const nextCombo = correct ? combo + 1 : 0;
@@ -1163,8 +1354,8 @@ function QuizRunner({ questions, answers, setAnswers, status, onSubmit, onRetry,
     </div>
   );
 }
-function LessonView({ lesson, stage, answers, setAnswers, quizStatus, onTakeQuiz, onSubmitQuiz, onRetryQuiz, onAnswer, combo, actionText, setActionText, takeawayText, setTakeawayText, bonusDone, setBonusDone, bonusNote, setBonusNote, completed, celebration, onFinish, onBack, onNext }: {
-  lesson: Lesson; stage: LessonStage; answers: Record<number, number>; setAnswers: React.Dispatch<React.SetStateAction<Record<number, number>>>; quizStatus: "idle" | "failed" | "passed"; onTakeQuiz: () => void; onSubmitQuiz: () => void; onRetryQuiz: () => void; onAnswer: (correct: boolean) => void; combo: number; actionText: string; setActionText: (value: string) => void; takeawayText: string; setTakeawayText: (value: string) => void; bonusDone: boolean; setBonusDone: (value: boolean) => void; bonusNote: string; setBonusNote: (value: string) => void; completed: boolean; celebration: string[]; onFinish: () => void; onBack: () => void; onNext: () => void;
+function LessonView({ lesson, quiz, stage, answers, setAnswers, quizStatus, onTakeQuiz, onSubmitQuiz, onRetryQuiz, onAnswer, combo, actionText, setActionText, takeawayText, setTakeawayText, bonusDone, setBonusDone, bonusNote, setBonusNote, completed, celebration, onFinish, onBack, onNext }: {
+  lesson: Lesson; quiz: QuizQuestion[]; stage: LessonStage; answers: Record<number, number>; setAnswers: React.Dispatch<React.SetStateAction<Record<number, number>>>; quizStatus: "idle" | "failed" | "passed"; onTakeQuiz: () => void; onSubmitQuiz: () => void; onRetryQuiz: () => void; onAnswer: (correct: boolean, question?: QuizQuestion) => void; combo: number; actionText: string; setActionText: (value: string) => void; takeawayText: string; setTakeawayText: (value: string) => void; bonusDone: boolean; setBonusDone: (value: boolean) => void; bonusNote: string; setBonusNote: (value: string) => void; completed: boolean; celebration: string[]; onFinish: () => void; onBack: () => void; onNext: () => void;
 }) {
   const quizOpen = stage === "quiz" || stage === "action" || stage === "complete";
   // The check is a retrieval test. While it is open the lesson is off the page,
@@ -1184,7 +1375,7 @@ function LessonView({ lesson, stage, answers, setAnswers, quizStatus, onTakeQuiz
           {stage === "read" && <section className="understood-card"><div><span className="eyebrow">READY TO CONTINUE?</span><h2>You’ve learned it.<br />Now prove it.</h2><p>The quiz checks understanding before the day’s action unlocks.</p></div><button className="primary-button" onClick={onTakeQuiz}>Understood — take the quiz <ChevronRight aria-hidden="true" /></button></section>}
 
           {quizOpen && <section className="quiz-area" aria-labelledby="quiz-heading"><div className="quiz-heading"><div><span className="eyebrow">KNOWLEDGE CHECK · +10 XP</span><h2 id="quiz-heading">You’ve learned it. Now prove it.</h2></div>{stage !== "quiz" && <span className="passed-tag"><Check aria-hidden="true" /> Passed</span>}</div>
-            {stage === "quiz" && <QuizRunner questions={lesson.quiz} answers={answers} setAnswers={setAnswers} status={quizStatus} onSubmit={onSubmitQuiz} onRetry={onRetryQuiz} onAnswer={onAnswer} combo={combo} submitLabel="Check my understanding" />}
+            {stage === "quiz" && <QuizRunner questions={quiz} answers={answers} setAnswers={setAnswers} status={quizStatus} onSubmit={onSubmitQuiz} onRetry={onRetryQuiz} onAnswer={onAnswer} combo={combo} submitLabel="Check my understanding" />}
           </section>}
 
           {actionOpen && <section className="action-area" aria-labelledby="action-heading"><div className="action-heading"><div className="action-icon"><Target aria-hidden="true" /></div><div><span className="eyebrow">TODAY’S ACTION · +20 XP</span><h2 id="action-heading">Now use it.</h2></div></div><p className="action-prompt">{lesson.actionPrompt}</p><p className="action-hint">{lesson.actionHint}</p>{!completed ? <textarea value={actionText} onChange={(event) => setActionText(event.target.value.slice(0, 300))} placeholder="Write the small action you will actually take…" aria-label="Today’s action" maxLength={300} /> : <div className="saved-note"><Check aria-hidden="true" /><p>{actionText}</p></div>}

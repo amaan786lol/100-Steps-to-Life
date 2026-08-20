@@ -880,3 +880,29 @@ textarea:focus { border-color: var(--moss); box-shadow: 0 0 0 3px rgba(53, 106, 
 .review-flag { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 10px; padding: 5px 10px; border: 1px solid color-mix(in srgb, var(--sky) 46%, var(--line)); border-radius: 999px; background: var(--sky-pale); color: var(--ink-soft); font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .review-flag svg { width: 12px; height: 12px; }
 .header-withheld { color: var(--muted); font-style: italic; }
+
+/* --- Retention record -----------------------------------------------------
+   Completion is a count of days. Retention is what came back when it was
+   asked for again, which is the thing the course is actually for. */
+.retention-card { display: grid; gap: 15px; }
+.retention-empty { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.6; }
+.retention-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.retention-key { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .04em; }
+.retention-key i { display: block; width: 10px; height: 10px; border-radius: 3px; }
+.retention-key.strong i { background: var(--moss); }
+.retention-key.holding i { background: color-mix(in srgb, var(--moss) 45%, var(--paper-deep)); }
+.retention-key.shaky i { background: var(--clay); }
+.retention-key.unseen i { background: var(--paper-deep); border: 1px solid var(--line); }
+.retention-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(30px, 1fr)); gap: 5px; }
+.retention-cell { display: grid; place-items: center; aspect-ratio: 1; border-radius: 7px; background: var(--paper-deep); color: var(--muted); font-size: 10px; font-weight: 800; font-variant-numeric: tabular-nums; transition: transform 160ms var(--ease-out); }
+.retention-cell:hover { transform: translateY(-2px); }
+.retention-cell.strong { background: var(--moss); color: white; }
+.retention-cell.holding { background: color-mix(in srgb, var(--moss) 40%, var(--paper-deep)); color: var(--ink); }
+.retention-cell.shaky { background: var(--clay); color: white; }
+.retention-cell.unseen { border: 1px solid var(--line); background: transparent; }
+.retention-weak { display: grid; gap: 12px; padding: 15px; border: 1px solid color-mix(in srgb, var(--clay) 40%, var(--line)); border-radius: 13px; background: var(--clay-pale); }
+.retention-weak p { margin: 0; color: var(--ink-soft); font-size: 12.5px; line-height: 1.6; }
+.retention-weak strong { color: var(--ink); }
+.retention-weak .primary-button { justify-self: start; }
+.practice-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+@media (min-width: 620px) { .retention-weak { grid-template-columns: minmax(0, 1fr) auto; align-items: center; } .retention-weak .primary-button { justify-self: end; } }

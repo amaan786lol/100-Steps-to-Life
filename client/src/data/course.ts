@@ -24,6 +24,8 @@ export type QuizQuestion = {
   explanation: string;
   /** "method" questions are about how the course works and recur across days. */
   scope?: "lesson" | "method" | "review";
+  /** For a review question, the day it originally belonged to. */
+  fromDay?: number;
 };
 
 export type Lesson = {
@@ -249,6 +251,19 @@ const topics: Topic[][] = [
 /** Ten questions on island one, rising evenly to fifteen on island ten. */
 export const questionCountForPhase = (phaseId: number) => 10 + Math.round(((phaseId - 1) * 5) / 9);
 
+/**
+ * How many of a day's questions come back from earlier days. Day one has
+ * nothing behind it; after that the share grows with the course.
+ */
+export const reviewSlotsFor = (day: number, phaseId: number) =>
+  day === 1 ? 0 : Math.min(7, Math.max(2, questionCountForPhase(phaseId) - 8));
+
+/** The full length of a day's check, static questions plus review. */
+export const totalQuestionsForDay = (day: number) => {
+  const lesson = getLesson(day);
+  return lesson.quiz.length + reviewSlotsFor(day, lesson.phase.id);
+};
+
 /** Understanding is shown at roughly seven in ten, whatever the quiz length. */
 export const passMark = (questionCount: number) => Math.ceil(questionCount * 0.7);
 
@@ -320,8 +335,8 @@ const methodBank: QuizQuestion[] = [
  * lesson into something retained. Method questions are capped at two, because a
  * check should mostly be about the course's content, not its rules.
  */
-const buildQuiz = (lesson: Lesson, everyLesson: Lesson[], earlierQuizzes: QuizQuestion[][]): QuizQuestion[] => {
-  const target = questionCountForPhase(lesson.phase.id);
+const buildQuiz = (lesson: Lesson, everyLesson: Lesson[]): QuizQuestion[] => {
+  const target = questionCountForPhase(lesson.phase.id) - reviewSlotsFor(lesson.day, lesson.phase.id);
   const random = seeded(lesson.day);
 
   // Authored questions list their correct option first. Shuffle every question's
@@ -358,26 +373,6 @@ const buildQuiz = (lesson: Lesson, everyLesson: Lesson[], earlierQuizzes: QuizQu
     seen.add(promptText);
   }
 
-  // Spaced review. Recent days are likeliest, with one reach further back, so
-  // material returns while it is still recoverable and again once it is not.
-  const METHOD_ALLOWANCE = 2;
-  const reviewWanted = Math.max(0, target - questions.length - METHOD_ALLOWANCE);
-  if (reviewWanted > 0 && earlierQuizzes.length) {
-    const recent = earlierQuizzes.slice(-9);
-    const older = earlierQuizzes.slice(0, -9);
-    for (let taken = 0; taken < reviewWanted; taken++) {
-      // Every third review question reaches past the last nine days when it can.
-      const fromOlder = taken % 3 === 2 && older.length > 0;
-      const shelf = fromOlder ? older : recent;
-      const source = shelf[Math.floor(random() * shelf.length)];
-      const pool = source.filter((question) => question.scope === "lesson" && !seen.has(question.question));
-      if (!pool.length) continue;
-      const question = pool[Math.floor(random() * pool.length)];
-      questions.push({ ...question, scope: "review" });
-      seen.add(question.question);
-    }
-  }
-
   // Two method questions, then the bank if a day is still short (day one has
   // nothing to review yet, so it leans on the bank instead).
   for (const question of method) {
@@ -405,13 +400,7 @@ const baseLessons: Lesson[] = topics.flatMap((phaseTopics, phaseIndex) =>
   })),
 );
 
-// Built in day order so each day can review the days already behind it.
-const builtQuizzes: QuizQuestion[][] = [];
-export const lessons: Lesson[] = baseLessons.map((lesson) => {
-  const quiz = buildQuiz(lesson, baseLessons, builtQuizzes.slice());
-  builtQuizzes.push(quiz);
-  return { ...lesson, quiz };
-});
+export const lessons: Lesson[] = baseLessons.map((lesson) => ({ ...lesson, quiz: buildQuiz(lesson, baseLessons) }));
 
 export const getLesson = (day: number) => lessons.find((lesson) => lesson.day === day) ?? lessons[0];
 
@@ -436,6 +425,66 @@ export const buildRecheck = (phaseId: number): QuizQuestion[] => {
     if (!candidates.length) continue;
     const question = candidates[Math.floor(random() * candidates.length)];
     picked.push(question);
+    seen.add(question.question);
+  }
+  return picked;
+};
+
+/* ---------------------------------------------------------------------------
+ * Adaptive review
+ *
+ * Review is only worth the questions it spends. Rather than sampling earlier
+ * days at random, a day is chosen by how shaky it looks: material the learner
+ * has missed comes back soonest and most often, material they have answered
+ * correctly several times drops back, and a day that has not been seen for a
+ * long time rises again on its own. This is the part that turns a hundred
+ * separate lessons into something retained.
+ * ------------------------------------------------------------------------ */
+
+/** What the journal remembers about one earlier day's material. */
+export type RecallRecord = { seen: number; missed: number; lastReviewedDay?: number };
+
+/**
+ * Lower is stronger. A day that has never been reviewed sits mid-table so it
+ * gets picked up; every miss pushes it sharply to the front of the queue.
+ */
+export const recallWeight = (day: number, currentDay: number, record: RecallRecord | undefined) => {
+  const gap = Math.max(0, currentDay - (record?.lastReviewedDay ?? day));
+  const misses = record?.missed ?? 0;
+  const hits = Math.max(0, (record?.seen ?? 0) - misses);
+  // Strength falls withcorrect answer and rises steeply with each miss.
+  const strength = hits - misses * 3;
+  return strength * 10 - gap;
+};
+
+/**
+ * Pick review questions for a day. Days are ranked weakest first, each
+ * contributes at most one question, and selection stays deterministic for a
+ * given journal so returning to a day shows the same check.
+ */
+export const selectReview = (
+  day: number,
+  count: number,
+  recall: Record<number, RecallRecord>,
+  completedDays: number[],
+): QuizQuestion[] => {
+  if (count <= 0) return [];
+  const behind = completedDays.filter((earlier) => earlier < day).sort((a, b) => a - b);
+  if (!behind.length) return [];
+  const random = seeded(day * 31);
+
+  const ranked = behind
+    .map((earlier) => ({ day: earlier, weight: recallWeight(earlier, day, recall[earlier]) }))
+    .sort((a, b) => a.weight - b.weight || b.day - a.day);
+
+  const picked: QuizQuestion[] = [];
+  const seen = new Set<string>();
+  for (const entry of ranked) {
+    if (picked.length >= count) break;
+    const pool = getLesson(entry.day).quiz.filter((question) => question.scope === "lesson" && !seen.has(question.question));
+    if (!pool.length) continue;
+    const question = pool[Math.floor(random() * pool.length)];
+    picked.push({ ...question, scope: "review", fromDay: entry.day });
     seen.add(question.question);
   }
   return picked;
