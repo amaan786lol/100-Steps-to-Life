@@ -22,6 +22,8 @@ export type QuizQuestion = {
   options: string[];
   answer: number;
   explanation: string;
+  /** "method" questions are about how the course works and recur across days. */
+  scope?: "lesson" | "method" | "review";
 };
 
 export type Lesson = {
@@ -270,13 +272,26 @@ const shuffled = <T>(items: T[], random: () => number) => {
 
 type GeneratedField = "keyIdea" | "why" | "example" | "actionPrompt" | "bonus";
 
-const fieldPrompts: { field: GeneratedField; question: string; explain: (lesson: Lesson) => string }[] = [
-  { field: "keyIdea", question: "Which idea is the heart of this lesson?", explain: (lesson) => `The lesson turns on this: ${lesson.keyIdea}` },
-  { field: "why", question: "Why does this lesson matter?", explain: (lesson) => lesson.why },
-  { field: "example", question: "Which example shows this lesson at work?", explain: (lesson) => lesson.example },
-  { field: "actionPrompt", question: "What does this day actually ask you to do?", explain: (lesson) => `The day is complete once you have done this: ${lesson.actionPrompt}` },
-  { field: "bonus", question: "Which optional challenge belongs to this day?", explain: (lesson) => `The bonus is optional, and it is this: ${lesson.bonus}` },
+const fieldPrompts: { field: GeneratedField; question: (lesson: Lesson) => string; explain: (lesson: Lesson) => string }[] = [
+  { field: "keyIdea", question: (lesson) => `Day ${lesson.day}, “${lesson.title}” — which idea is at its heart?`, explain: (lesson) => `The lesson turns on this: ${lesson.keyIdea}` },
+  { field: "why", question: (lesson) => `Why does “${lesson.title}” matter?`, explain: (lesson) => lesson.why },
+  { field: "example", question: (lesson) => `Which example shows “${lesson.title}” at work?`, explain: (lesson) => lesson.example },
+  { field: "actionPrompt", question: (lesson) => `What does “${lesson.title}” actually ask you to do?`, explain: (lesson) => `The day is complete once you have done this: ${lesson.actionPrompt}` },
+  { field: "bonus", question: (lesson) => `Which optional challenge belongs to “${lesson.title}”?`, explain: (lesson) => `The bonus is optional, and it is this: ${lesson.bonus}` },
 ];
+
+/** Two questions are authored into every lesson: they are about the method,
+ *  not the day, so they must not count as island-specific material. */
+const AUTHORED_METHOD_QUESTIONS = new Set([
+  "What should happen after you understand a useful idea?",
+  "How should you respond if you miss a step?",
+]);
+
+/** Authored prompts that say "this lesson" cannot travel into a mixed check. */
+const nameTheLesson = (question: string, lesson: Lesson) =>
+  question
+    .replace("Which answer best captures today’s lesson?", `Day ${lesson.day}, “${lesson.title}” — which answer best captures it?`)
+    .replace("What is the purpose of Day 1?", "What is the purpose of Day 1, “Arrival”?");
 
 /** Questions about the course's own method, rotated so days do not repeat. */
 const methodBank: QuizQuestion[] = [
@@ -296,52 +311,90 @@ const methodBank: QuizQuestion[] = [
   { question: "What makes a knowledge check useful?", options: ["Being asked to retrieve an idea shows whether you hold it", "It proves you read carefully", "It makes the lesson feel harder", "It records a score for later"], answer: 0, explanation: "Retrieving an idea is a far better test of understanding than re-reading it." },
 ];
 
-const buildQuiz = (lesson: Lesson, everyLesson: Lesson[]): QuizQuestion[] => {
+/**
+ * Build one day's check.
+ *
+ * The composition matters more than the length. A check made only of questions
+ * about the day just read tests nothing but short-term memory, so every day
+ * after the first also asks about earlier days — spaced review is what turns a
+ * lesson into something retained. Method questions are capped at two, because a
+ * check should mostly be about the course's content, not its rules.
+ */
+const buildQuiz = (lesson: Lesson, everyLesson: Lesson[], earlierQuizzes: QuizQuestion[][]): QuizQuestion[] => {
   const target = questionCountForPhase(lesson.phase.id);
   const random = seeded(lesson.day);
+
   // Authored questions list their correct option first. Shuffle every question's
   // options so position is never a tell — seeded, so it stays put between visits.
   const reorder = (question: QuizQuestion): QuizQuestion => {
     const options = shuffled(question.options, random);
     return { ...question, options, answer: options.indexOf(question.options[question.answer]) };
   };
-  const questions: QuizQuestion[] = lesson.quiz.map(reorder);
+
+  const authored: QuizQuestion[] = [];
+  const method: QuizQuestion[] = [];
+  for (const question of lesson.quiz) {
+    const shaped: QuizQuestion = {
+      ...reorder(question),
+      question: nameTheLesson(question.question, lesson),
+      scope: AUTHORED_METHOD_QUESTIONS.has(question.question) ? "method" : "lesson",
+    };
+    (shaped.scope === "method" ? method : authored).push(shaped);
+  }
+
+  const questions: QuizQuestion[] = [...authored];
   const seen = new Set(questions.map((question) => question.question));
 
   // Questions drawn from this lesson's own wording.
   for (const prompt of shuffled(fieldPrompts, random)) {
-    if (questions.length >= target) break;
-    if (seen.has(prompt.question)) continue;
+    const promptText = prompt.question(lesson);
+    if (seen.has(promptText)) continue;
     const correct = lesson[prompt.field];
     const pool = everyLesson.filter((other) => other.day !== lesson.day).map((other) => other[prompt.field]).filter((value) => value !== correct);
     const distractors = shuffled(pool, random).slice(0, 3);
     if (distractors.length < 3) continue;
     const options = shuffled([correct, ...distractors], random);
-    questions.push({ question: prompt.question, options, answer: options.indexOf(correct), explanation: prompt.explain(lesson) });
-    seen.add(prompt.question);
+    questions.push({ question: promptText, options, answer: options.indexOf(correct), explanation: prompt.explain(lesson), scope: "lesson" });
+    seen.add(promptText);
   }
 
-  // One question locating the lesson on the route.
-  const placeQuestion = "Which part of the route does this lesson belong to?";
-  if (questions.length < target && !seen.has(placeQuestion)) {
-    const correct = `${lesson.phase.island} — ${lesson.phase.title}`;
-    const others = shuffled(phases.filter((phase) => phase.id !== lesson.phase.id), random).slice(0, 3).map((phase) => `${phase.island} — ${phase.title}`);
-    const options = shuffled([correct, ...others], random);
-    questions.push({ question: placeQuestion, options, answer: options.indexOf(correct), explanation: `Day ${lesson.day} sits on ${lesson.phase.island}, the ${lesson.phase.title.toLowerCase()} stretch of the route.` });
-    seen.add(placeQuestion);
+  // Spaced review. Recent days are likeliest, with one reach further back, so
+  // material returns while it is still recoverable and again once it is not.
+  const METHOD_ALLOWANCE = 2;
+  const reviewWanted = Math.max(0, target - questions.length - METHOD_ALLOWANCE);
+  if (reviewWanted > 0 && earlierQuizzes.length) {
+    const recent = earlierQuizzes.slice(-9);
+    const older = earlierQuizzes.slice(0, -9);
+    for (let taken = 0; taken < reviewWanted; taken++) {
+      // Every third review question reaches past the last nine days when it can.
+      const fromOlder = taken % 3 === 2 && older.length > 0;
+      const shelf = fromOlder ? older : recent;
+      const source = shelf[Math.floor(random() * shelf.length)];
+      const pool = source.filter((question) => question.scope === "lesson" && !seen.has(question.question));
+      if (!pool.length) continue;
+      const question = pool[Math.floor(random() * pool.length)];
+      questions.push({ ...question, scope: "review" });
+      seen.add(question.question);
+    }
   }
 
-  // Top up from the method bank, rotated by day so neighbouring days differ.
+  // Two method questions, then the bank if a day is still short (day one has
+  // nothing to review yet, so it leans on the bank instead).
+  for (const question of method) {
+    if (questions.length >= target || seen.has(question.question)) continue;
+    questions.push(question);
+    seen.add(question.question);
+  }
   const offset = (lesson.day * 5) % methodBank.length;
   for (let step = 0; step < methodBank.length && questions.length < target; step++) {
     const question = methodBank[(offset + step) % methodBank.length];
     if (seen.has(question.question)) continue;
     const options = shuffled(question.options, random);
-    questions.push({ ...question, options, answer: options.indexOf(question.options[question.answer]) });
+    questions.push({ ...question, options, answer: options.indexOf(question.options[question.answer]), scope: "method" });
     seen.add(question.question);
   }
 
-  return questions;
+  return questions.slice(0, target);
 };
 
 const baseLessons: Lesson[] = topics.flatMap((phaseTopics, phaseIndex) =>
@@ -352,7 +405,13 @@ const baseLessons: Lesson[] = topics.flatMap((phaseTopics, phaseIndex) =>
   })),
 );
 
-export const lessons: Lesson[] = baseLessons.map((lesson) => ({ ...lesson, quiz: buildQuiz(lesson, baseLessons) }));
+// Built in day order so each day can review the days already behind it.
+const builtQuizzes: QuizQuestion[][] = [];
+export const lessons: Lesson[] = baseLessons.map((lesson) => {
+  const quiz = buildQuiz(lesson, baseLessons, builtQuizzes.slice());
+  builtQuizzes.push(quiz);
+  return { ...lesson, quiz };
+});
 
 export const getLesson = (day: number) => lessons.find((lesson) => lesson.day === day) ?? lessons[0];
 
@@ -373,7 +432,7 @@ export const buildRecheck = (phaseId: number): QuizQuestion[] => {
   // Take one question from each day first, so every lesson is represented.
   for (const lesson of shuffled(island, random)) {
     if (picked.length >= RECHECK_LENGTH) break;
-    const candidates = lesson.quiz.filter((question) => !seen.has(question.question));
+    const candidates = lesson.quiz.filter((question) => question.scope === "lesson" && !seen.has(question.question));
     if (!candidates.length) continue;
     const question = candidates[Math.floor(random() * candidates.length)];
     picked.push(question);
@@ -381,5 +440,59 @@ export const buildRecheck = (phaseId: number): QuizQuestion[] => {
   }
   return picked;
 };
+
+/* ---------------------------------------------------------------------------
+ * The Summit quest
+ *
+ * The course does not end on a longer quiz. It ends on two trials taken in
+ * order: one that asks whether the hundred days are still in reach, and one
+ * that asks whether they changed how a decision gets made. Recall is sampled
+ * across every island; judgment is hand-written, one scenario per island.
+ * ------------------------------------------------------------------------ */
+
+export const FINAL_RECALL_LENGTH = 15;
+
+/** Fifteen questions spread evenly across all ten islands. */
+export const buildFinalRecall = (): QuizQuestion[] => {
+  const random = seeded(9001);
+  const picked: QuizQuestion[] = [];
+  const seen = new Set<string>();
+  // Walk the islands in a shuffled order, repeatedly, so every island is
+  // represented before any island contributes a second question.
+  for (let pass = 0; pass < 2 && picked.length < FINAL_RECALL_LENGTH; pass++) {
+    for (const phase of shuffled(phases, random)) {
+      if (picked.length >= FINAL_RECALL_LENGTH) break;
+      const pool = lessonsForPhase(phase.id).flatMap((lesson) => lesson.quiz).filter((question) => question.scope === "lesson" && !seen.has(question.question));
+      if (!pool.length) continue;
+      const question = pool[Math.floor(random() * pool.length)];
+      picked.push(question);
+      seen.add(question.question);
+    }
+  }
+  return picked;
+};
+
+/** One judgment scenario per island, in route order. */
+export const finalScenarios: (QuizQuestion & { cue: string })[] = [
+  { cue: "Firstlight Cove", question: "You miss several planned actions in a difficult week. What best reflects the course method?", options: ["Restart the entire course from Day 1", "Treat the miss as information, return to the current waypoint, and choose one honest next action", "Add more tasks to compensate", "Wait until motivation returns"], answer: 1, explanation: "A gap is information, not a verdict. The route asks for a return and one honest step — not a restart, a penalty, or a wait." },
+  { cue: "Lantern Gardens", question: "A choice looks productive but slowly harms your character and responsibilities. What should guide your decision?", options: ["What gives the fastest visible result", "What other people will praise", "Clear intention, sound character, and what you can responsibly sustain", "The most difficult option"], answer: 2, explanation: "Intention and character come before visible output. Work that quietly costs you your responsibilities is not productive." },
+  { cue: "Training Ridge", question: "You only act when you feel motivated. What is the next useful experiment?", options: ["Build one small repeatable cue that lowers the barrier to beginning", "Wait for a stronger feeling", "Make a larger promise", "Stop setting goals"], answer: 0, explanation: "Motivation is welcome but unreliable. A system makes the right action easier to begin on an ordinary day." },
+  { cue: "The Observatory", question: "You are reacting quickly to an upsetting message. What does the Observatory ask you to do first?", options: ["Reply immediately so you do not look weak", "Assume you know the other person's intent", "Pause, notice the story you are telling yourself, and check what you know", "Ignore the situation forever"], answer: 2, explanation: "Attention before reaction: separate what you actually know from the story you have added to it." },
+  { cue: "Bridgehaven", question: "A relationship feels distant after a misunderstanding. What is the strongest next step?", options: ["Win the argument in your head", "Make one respectful attempt to listen, clarify, or repair", "Avoid them indefinitely", "Ask someone else to take sides"], answer: 1, explanation: "Repair is an action, not a feeling. One respectful attempt to listen does more than any amount of private rehearsal." },
+  { cue: "Wildwood Valley", question: "Your energy is low and you have been forcing more output. What is the mature response?", options: ["Ignore your body because discipline means never resting", "Identify one recovery practice that protects tomorrow's useful effort", "Quit every commitment", "Buy a new productivity system"], answer: 1, explanation: "Discipline includes protecting the energy the work depends on. Recovery is part of sustainable effort, not a retreat from it." },
+  { cue: "Maker’s Quay", question: "You want to become more skilled. Which action creates the most useful evidence?", options: ["Consume more advice without practising", "Make a small real thing, review it, and improve the next version", "Wait until you feel talented", "Copy someone else's work exactly"], answer: 1, explanation: "Skill shows up in made things. A small finished attempt teaches more than any amount of collected advice." },
+  { cue: "Value Harbour", question: "You receive money or opportunity through your work. What should remain central?", options: ["Creating useful value responsibly and managing what you earn with care", "Showing people how successful you are", "Taking the fastest option regardless of impact", "Avoiding all decisions about money"], answer: 0, explanation: "Value creation and responsible stewardship stay central. Display and speed are not the measure." },
+  { cue: "Common Ground", question: "You are asked to lead a group task. What does the Common Ground perspective emphasise?", options: ["Doing everything yourself to stay in control", "Using the role to gain status", "Making responsibility clearer, listening well, and helping the group move", "Waiting for someone else to decide"], answer: 2, explanation: "Leadership here is service: clarify responsibility, listen properly, and help the group move." },
+  { cue: "The Summit", question: "After 100 days, what does the Summit actually ask of you?", options: ["Prove you are now perfect", "Keep using the method with humility when life changes", "Collect a final score and stop reflecting", "Repeat only your favourite lessons"], answer: 1, explanation: "The course is a foundation for continuing, not a finish line. The method matters more than the score." },
+];
+
+/** The two trials, in the order they must be taken. */
+export const finalTrials = [
+  { id: 0, name: "Trial of Recall", blurb: "Fifteen questions drawn from across all ten islands. It asks whether the hundred days are still within reach.", length: FINAL_RECALL_LENGTH },
+  { id: 1, name: "Trial of Judgment", blurb: "Ten situations with no lesson in front of you, one from each island. It asks whether the course changed how you decide.", length: finalScenarios.length },
+] as const;
+
+export const buildTrial = (trial: number): QuizQuestion[] =>
+  trial === 0 ? buildFinalRecall() : finalScenarios.map(({ cue: _cue, ...question }) => question);
 
 export { phases };

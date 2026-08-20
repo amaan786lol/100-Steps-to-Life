@@ -39,7 +39,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { RECHECK_LENGTH, buildRecheck, getLesson, lessons, passMark, phases, type CoursePhase, type Lesson, type QuizQuestion } from "../data/course";
+import { RECHECK_LENGTH, buildRecheck, buildTrial, finalTrials, getLesson, lessons, passMark, phases, type CoursePhase, type Lesson, type QuizQuestion } from "../data/course";
 
 const STORAGE_KEY = "hundred-steps-to-life-v1";
 const THEME_STORAGE_KEY = "hundred-steps-to-life-theme";
@@ -93,6 +93,8 @@ type AppData = {
   /** Consecutive correct answers, carried across lessons until one is missed. */
   combo: number;
   bestCombo: number;
+  /** Summit trials passed, by index. */
+  trialsPassed: number[];
   finalTestComplete: boolean;
 };
 
@@ -108,21 +110,9 @@ const defaultData: AppData = {
   rechecks: {},
   combo: 0,
   bestCombo: 0,
+  trialsPassed: [],
   finalTestComplete: false,
 };
-
-const finalQuestions = [
-  { prompt: "You miss several planned actions in a difficult week. What best reflects the course method?", options: ["Restart the entire course from Day 1", "Treat the miss as information, return to the current waypoint, and choose one honest next action", "Add more tasks to compensate", "Wait until motivation returns"], answer: 1, cue: "Foundation" },
-  { prompt: "A choice looks productive but slowly harms your character and responsibilities. What should guide your decision?", options: ["What gives the fastest visible result", "What other people will praise", "Clear intention, sound character, and what you can responsibly sustain", "The most difficult option"], answer: 2, cue: "Lantern Gardens" },
-  { prompt: "You only act when you feel motivated. What is the next useful experiment?", options: ["Build one small repeatable cue that lowers the barrier to beginning", "Wait for a stronger feeling", "Make a larger promise", "Stop setting goals"], answer: 0, cue: "Training Ridge" },
-  { prompt: "You are reacting quickly to an upsetting message. What does the Observatory ask you to do first?", options: ["Reply immediately so you do not look weak", "Assume you know the other person’s intent", "Pause, notice the story you are telling yourself, and check what you know", "Ignore the situation forever"], answer: 2, cue: "The Observatory" },
-  { prompt: "A relationship feels distant after a misunderstanding. What is the strongest next step?", options: ["Win the argument in your head", "Make one respectful attempt to listen, clarify, or repair", "Avoid them indefinitely", "Ask someone else to take sides"], answer: 1, cue: "Bridgehaven" },
-  { prompt: "Your energy is low and you have been forcing more output. What is the mature response?", options: ["Ignore your body because discipline means never resting", "Identify one recovery practice that protects tomorrow’s useful effort", "Quit every commitment", "Buy a new productivity system"], answer: 1, cue: "Wildwood Valley" },
-  { prompt: "You want to become more skilled. Which action creates the most useful evidence?", options: ["Consume more advice without practising", "Make a small real thing, review it, and improve the next version", "Wait until you feel talented", "Copy someone else’s work exactly"], answer: 1, cue: "Maker’s Quay" },
-  { prompt: "You receive money or opportunity through your work. What should remain central?", options: ["Creating useful value responsibly and managing what you earn with care", "Showing people how successful you are", "Taking the fastest option regardless of impact", "Avoiding all decisions about money"], answer: 0, cue: "Value Harbour" },
-  { prompt: "You are asked to lead a group task. What does the Common Ground perspective emphasise?", options: ["Doing everything yourself to stay in control", "Using the role to gain status", "Making responsibility clearer, listening well, and helping the group move", "Waiting for someone else to decide"], answer: 2, cue: "Common Ground" },
-  { prompt: "After 100 days, what does the Summit actually ask of you?", options: ["Prove you are now perfect", "Keep using the method with humility when life changes", "Collect a final score and stop reflecting", "Repeat only your favourite lessons"], answer: 1, cue: "The Summit" },
-];
 
 const cn = (...values: Array<string | false | undefined>) => values.filter(Boolean).join(" ");
 
@@ -270,6 +260,7 @@ export default function Home() {
   const [travelTransition, setTravelTransition] = useState<TravelTransition | null>(null);
   const [finalAnswers, setFinalAnswers] = useState<Record<number, number>>({});
   const [finalStatus, setFinalStatus] = useState<"idle" | "failed" | "passed">("idle");
+  const [activeTrial, setActiveTrial] = useState<number | null>(null);
   const backupQuery = trpc.progress.get.useQuery(undefined, { enabled: isAuthenticated, retry: false });
   const backupMutation = trpc.progress.save.useMutation({
     onSuccess: () => {
@@ -443,21 +434,36 @@ export default function Home() {
     chooseView("final");
   }
 
-  function submitFinalTest() {
-    if (Object.keys(finalAnswers).length !== finalQuestions.length) {
+  function openTrial(trial: number) {
+    setActiveTrial(trial);
+    setFinalAnswers({});
+    setFinalStatus(data.trialsPassed?.includes(trial) ? "passed" : "idle");
+    setNotice("");
+  }
+
+  function submitTrial() {
+    if (activeTrial === null) return;
+    const questions = buildTrial(activeTrial);
+    const score = questions.reduce((total, question, index) => total + (finalAnswers[index] === question.answer ? 1 : 0), 0);
+    if (score < passMark(questions.length)) {
       setFinalStatus("failed");
-      setNotice("Answer every scenario before completing the Final Test.");
-      return;
-    }
-    const score = finalQuestions.reduce((total, question, index) => total + (finalAnswers[index] === question.answer ? 1 : 0), 0);
-    if (score < 7) {
-      setFinalStatus("failed");
-      setNotice("Not yet. Read the scenario feedback, return to what matters, then try again.");
+      setNotice("Not yet. Read what each one was pointing at, then take the trial again.");
       return;
     }
     setFinalStatus("passed");
-    setData((previous) => previous.finalTestComplete ? previous : { ...previous, finalTestComplete: true, xp: previous.xp + 100 });
-    setNotice(`Final Test complete: ${score}/10 scenario choices showed sound judgment.`);
+    const already = data.trialsPassed?.includes(activeTrial) ?? false;
+    const passedTrials = already ? data.trialsPassed : [...(data.trialsPassed ?? []), activeTrial];
+    const questComplete = finalTrials.every((trial) => passedTrials.includes(trial.id));
+    setData({
+      ...data,
+      trialsPassed: passedTrials,
+      xp: data.xp + (already ? 0 : 60) + (questComplete && !data.finalTestComplete ? 100 : 0),
+      finalTestComplete: data.finalTestComplete || questComplete,
+    });
+    setNotice(questComplete
+      ? "The Summit quest is complete. The route is one connected world."
+      : `${finalTrials[activeTrial].name} passed: ${score}/${questions.length}. One trial remains.`);
+    setActiveTrial(null);
   }
 
   function resetProgress() {
@@ -592,7 +598,7 @@ export default function Home() {
               onContinue={() => { const next = recheckPhaseId * 10 + 1; if (next <= 100) openLesson(next); else chooseView("map"); }}
             />
           )}
-          {view === "final" && <FinalTestView data={data} answers={finalAnswers} setAnswers={setFinalAnswers} status={finalStatus} onSubmit={submitFinalTest} onBack={() => chooseView("map")} />}
+          {view === "final" && <SummitQuest data={data} activeTrial={activeTrial} answers={finalAnswers} setAnswers={setFinalAnswers} status={finalStatus} onOpenTrial={openTrial} onSubmit={submitTrial} onRetry={() => { setFinalAnswers({}); setFinalStatus("idle"); setNotice(""); }} onAnswer={answerRecorded} combo={data.combo} onLeaveTrial={() => { setActiveTrial(null); setFinalStatus("idle"); }} onBack={() => chooseView("map")} />}
         </div>
 
         <nav className="mobile-tabbar" aria-label="Mobile primary navigation">
@@ -788,8 +794,104 @@ function IslandTravelTransition({ transition, onSkip }: { transition: TravelTran
   return <aside className="island-travel" role="status" aria-live="polite"><div className="travel-card"><div className="travel-place" style={{ backgroundImage: `url(${ISLAND_IMAGES[transition.from.id]})` }}><span>{transition.from.island}</span></div><div className="travel-line"><Footprints aria-hidden="true" /><span>Passage charted</span></div><div className="travel-place arrival" style={{ backgroundImage: `url(${ISLAND_IMAGES[transition.to.id]})` }}><span>{transition.to.island}</span></div><button onClick={onSkip}>Continue</button></div></aside>;
 }
 
-function FinalTestView({ data, answers, setAnswers, status, onSubmit, onBack }: { data: AppData; answers: Record<number, number>; setAnswers: React.Dispatch<React.SetStateAction<Record<number, number>>>; status: "idle" | "failed" | "passed"; onSubmit: () => void; onBack: () => void }) {
-  return <div className="final-test-shell"><section className="final-test-hero" style={{ backgroundImage: `linear-gradient(90deg, rgba(10,28,38,.83), rgba(10,28,38,.22)), url(${ISLAND_IMAGES[10]})` }}><button className="back-button light" onClick={onBack}><ArrowLeft aria-hidden="true" /> Back to the world</button><span className="eyebrow-light">THE CONNECTED WORLD</span><h1>The Final<br /><em>Test.</em></h1><p>This is not a memory exam. It asks whether you can choose a useful next action when life is more complicated than a lesson.</p><div className="final-progress"><span>{data.finalTestComplete ? "COMPLETE" : `${Object.keys(answers).length} / ${finalQuestions.length} SCENARIOS`}</span><i style={{ width: `${data.finalTestComplete ? 100 : (Object.keys(answers).length / finalQuestions.length) * 100}%` }} /></div></section><section className="final-questions">{data.finalTestComplete ? <div className="final-complete"><div className="summit-mark">✦</div><span className="eyebrow">ROUTE INTEGRATED</span><h2>The map is one world now.</h2><p>You completed the course and demonstrated sound judgment across its ten regions. Keep the route open: notice, choose, act, reflect, return.</p><button className="primary-button" onClick={onBack}>Return to the connected world <ChevronRight aria-hidden="true" /></button></div> : <>{finalQuestions.map((question, questionIndex) => <fieldset className="final-question" key={question.prompt}><legend><span>{String(questionIndex + 1).padStart(2, "0")}</span><small>{question.cue}</small>{question.prompt}</legend><div>{question.options.map((option, optionIndex) => <label key={option} className={cn("final-answer", answers[questionIndex] === optionIndex && "selected", status === "failed" && answers[questionIndex] === optionIndex && optionIndex !== question.answer && "incorrect")}><input type="radio" name={`final-question-${questionIndex}`} checked={answers[questionIndex] === optionIndex} onChange={() => setAnswers((previous) => ({ ...previous, [questionIndex]: optionIndex }))} /><span>{String.fromCharCode(65 + optionIndex)}</span><p>{option}</p></label>)}</div>{status === "failed" && answers[questionIndex] !== undefined && answers[questionIndex] !== question.answer && <p className="final-feedback">Return to the {question.cue} principle, then choose again.</p>}</fieldset>)}<button className="primary-button final-submit" onClick={onSubmit}>Complete the Final Test <ChevronRight aria-hidden="true" /></button></>}</section></div>;
+/**
+ * The Summit quest. Two trials taken in order: recall across every island,
+ * then judgment with no lesson in front of you. Both run through the same
+ * paginated check the rest of the course uses, so the capstone behaves like
+ * everything that led to it.
+ */
+function SummitQuest({ data, activeTrial, answers, setAnswers, status, onOpenTrial, onSubmit, onRetry, onAnswer, combo, onLeaveTrial, onBack }: {
+  data: AppData;
+  activeTrial: number | null;
+  answers: Record<number, number>;
+  setAnswers: React.Dispatch<React.SetStateAction<Record<number, number>>>;
+  status: "idle" | "failed" | "passed";
+  onOpenTrial: (trial: number) => void;
+  onSubmit: () => void;
+  onRetry: () => void;
+  onAnswer: (correct: boolean) => void;
+  combo: number;
+  onLeaveTrial: () => void;
+  onBack: () => void;
+}) {
+  const passed = data.trialsPassed ?? [];
+  const questions = useMemo(() => (activeTrial === null ? [] : buildTrial(activeTrial)), [activeTrial]);
+  const complete = data.finalTestComplete;
+
+  if (activeTrial !== null) {
+    const trial = finalTrials[activeTrial];
+    return (
+      <div className="final-test-shell">
+        <section className="trial-run-head">
+          <button className="back-button" onClick={onLeaveTrial}><ArrowLeft aria-hidden="true" /> Back to the Summit</button>
+          <span className="eyebrow">TRIAL {String(activeTrial + 1).padStart(2, "0")} OF {String(finalTrials.length).padStart(2, "0")}</span>
+          <h1>{trial.name}</h1>
+          <p>{trial.blurb}</p>
+          <span className="trial-bar"><Target aria-hidden="true" /> {passMark(questions.length)} of {questions.length} to pass</span>
+        </section>
+        <section className="recheck-body">
+          <QuizRunner
+            questions={questions}
+            answers={answers}
+            setAnswers={setAnswers}
+            status={status}
+            onSubmit={onSubmit}
+            onRetry={onRetry}
+            onAnswer={onAnswer}
+            combo={combo}
+            submitLabel={`Complete the ${trial.name}`}
+          />
+        </section>
+      </div>
+    );
+  }
+
+  return (
+    <div className="final-test-shell">
+      <section className="final-test-hero" style={{ backgroundImage: `linear-gradient(90deg, rgba(10,28,38,.86), rgba(10,28,38,.22)), url(${ISLAND_IMAGES[10]})` }}>
+        <button className="back-button light" onClick={onBack}><ArrowLeft aria-hidden="true" /> Back to the world</button>
+        <span className="eyebrow-light">THE CONNECTED WORLD</span>
+        <h1>The Summit<br /><em>Quest.</em></h1>
+        <p>Not a memory exam. Two trials stand at the end of the route: one asks whether the hundred days are still within reach, the other whether they changed how you decide.</p>
+        <div className="final-progress">
+          <span>{complete ? "QUEST COMPLETE" : `${passed.length} / ${finalTrials.length} TRIALS PASSED`}</span>
+          <i style={{ width: `${(passed.length / finalTrials.length) * 100}%` }} />
+        </div>
+      </section>
+
+      {complete ? (
+        <section className="final-complete">
+          <div className="summit-mark">✦</div>
+          <span className="eyebrow">ROUTE INTEGRATED</span>
+          <h2>The map is one world now.</h2>
+          <p>You travelled a hundred days, held them together at the Summit, and showed sound judgment where no lesson was in front of you. Keep the route open: notice, choose, act, reflect, return.</p>
+          <button className="primary-button" onClick={onBack}>Return to the connected world <ChevronRight aria-hidden="true" /></button>
+        </section>
+      ) : (
+        <section className="trial-list">
+          {finalTrials.map((trial, index) => {
+            const done = passed.includes(trial.id);
+            const locked = index > 0 && !passed.includes(finalTrials[index - 1].id);
+            return (
+              <article className={cn("trial-card", done && "done", locked && "locked")} key={trial.id}>
+                <div className="trial-mark">{done ? <Check aria-hidden="true" /> : locked ? <Lock aria-hidden="true" /> : <Mountain aria-hidden="true" />}</div>
+                <div className="trial-copy">
+                  <span className="eyebrow">TRIAL {String(index + 1).padStart(2, "0")} · {trial.length} QUESTIONS</span>
+                  <h2>{trial.name}</h2>
+                  <p>{trial.blurb}</p>
+                </div>
+                {done
+                  ? <span className="trial-state"><Check aria-hidden="true" /> Passed</span>
+                  : locked
+                    ? <span className="trial-state muted"><Lock aria-hidden="true" /> Opens after the first trial</span>
+                    : <button className="primary-button" onClick={() => onOpenTrial(trial.id)}>Begin <ChevronRight aria-hidden="true" /></button>}
+              </article>
+            );
+          })}
+        </section>
+      )}
+    </div>
+  );
 }
 
 function AchievementsView({ achievements, data }: { achievements: ReturnType<typeof achievementList>; data: AppData }) {
@@ -1010,6 +1112,7 @@ function QuizRunner({ questions, answers, setAnswers, status, onSubmit, onRetry,
       </div>
 
       <fieldset className="quiz-question" key={index}>
+        {question.scope === "review" && <span className="review-flag"><RotateCcw aria-hidden="true" /> Back from an earlier day</span>}
         <legend>{question.question}</legend>
         <div className="quiz-options">
           {question.options.map((option, optionIndex) => (
@@ -1064,16 +1167,20 @@ function LessonView({ lesson, stage, answers, setAnswers, quizStatus, onTakeQuiz
   lesson: Lesson; stage: LessonStage; answers: Record<number, number>; setAnswers: React.Dispatch<React.SetStateAction<Record<number, number>>>; quizStatus: "idle" | "failed" | "passed"; onTakeQuiz: () => void; onSubmitQuiz: () => void; onRetryQuiz: () => void; onAnswer: (correct: boolean) => void; combo: number; actionText: string; setActionText: (value: string) => void; takeawayText: string; setTakeawayText: (value: string) => void; bonusDone: boolean; setBonusDone: (value: boolean) => void; bonusNote: string; setBonusNote: (value: string) => void; completed: boolean; celebration: string[]; onFinish: () => void; onBack: () => void; onNext: () => void;
 }) {
   const quizOpen = stage === "quiz" || stage === "action" || stage === "complete";
+  // The check is a retrieval test. While it is open the lesson is off the page,
+  // because a question you can scroll up and answer proves nothing.
+  const bookOpen = stage !== "quiz";
   const actionOpen = stage === "action" || stage === "complete";
   return (
     <div className="lesson-shell" key={lesson.day}>
       <div className="lesson-topline"><button className="back-button" onClick={onBack}><ArrowLeft aria-hidden="true" /> Back to today</button><span>DAY {String(lesson.day).padStart(2, "0")} / 100</span></div>
-      <section className="lesson-header"><div><p className="eyebrow">{lesson.phase.shortTitle.toUpperCase()} · {lesson.phase.range.toUpperCase()}</p><h1>{lesson.title}</h1><p>{lesson.why}</p></div><div className="lesson-waypoint"><span>{String(lesson.day).padStart(2, "0")}</span><i /></div></section>
+      <section className="lesson-header"><div><p className="eyebrow">{lesson.phase.shortTitle.toUpperCase()} · {lesson.phase.range.toUpperCase()}</p><h1>{lesson.title}</h1>{bookOpen ? <p>{lesson.why}</p> : <p className="header-withheld">Answering from memory — the lesson returns when the check is done.</p>}</div><div className="lesson-waypoint"><span>{String(lesson.day).padStart(2, "0")}</span><i /></div></section>
       <div className="lesson-layout">
         <article className="lesson-page">
-          <section className="lesson-section"><span className="section-index">01</span><div><p className="section-label">THE LESSON</p><p className="lesson-body">{lesson.lesson}</p></div></section>
+          {bookOpen && <><section className="lesson-section"><span className="section-index">01</span><div><p className="section-label">THE LESSON</p><p className="lesson-body">{lesson.lesson}</p></div></section>
           <section className="key-idea-block"><span className="section-label">KEY IDEA</span><p>{lesson.keyIdea}</p></section>
-          <section className="lesson-section example-section"><span className="section-index">02</span><div><p className="section-label">IN REAL LIFE</p><p className="lesson-body">{lesson.example}</p></div></section>
+          <section className="lesson-section example-section"><span className="section-index">02</span><div><p className="section-label">IN REAL LIFE</p><p className="lesson-body">{lesson.example}</p></div></section></>}
+          {stage === "quiz" && <section className="closed-book"><div className="closed-book-mark"><BookOpen aria-hidden="true" /></div><div><span className="eyebrow">BOOK CLOSED</span><h2>From memory now.</h2><p>The lesson is put away while you answer. If a question does not come back to you, that is the useful information — the review afterwards will show you what it was pointing at.</p></div></section>}
           {stage === "read" && <section className="understood-card"><div><span className="eyebrow">READY TO CONTINUE?</span><h2>You’ve learned it.<br />Now prove it.</h2><p>The quiz checks understanding before the day’s action unlocks.</p></div><button className="primary-button" onClick={onTakeQuiz}>Understood — take the quiz <ChevronRight aria-hidden="true" /></button></section>}
 
           {quizOpen && <section className="quiz-area" aria-labelledby="quiz-heading"><div className="quiz-heading"><div><span className="eyebrow">KNOWLEDGE CHECK · +10 XP</span><h2 id="quiz-heading">You’ve learned it. Now prove it.</h2></div>{stage !== "quiz" && <span className="passed-tag"><Check aria-hidden="true" /> Passed</span>}</div>

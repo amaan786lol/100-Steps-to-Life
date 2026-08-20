@@ -832,3 +832,51 @@ textarea:focus { border-color: var(--moss); box-shadow: 0 0 0 3px rgba(53, 106, 
     transform: none !important;
   }
 }
+
+/* --- The Summit quest ----------------------------------------------------- */
+.trial-list { display: grid; gap: 14px; }
+.trial-card { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 15px; padding: 20px; border: 1px solid var(--line); border-radius: 17px; background: var(--paper); box-shadow: var(--shadow-soft); animation: card-rise 480ms var(--ease-out) both; }
+.trial-card:nth-child(2) { animation-delay: 90ms; }
+.trial-mark { display: grid; place-items: center; width: 52px; height: 52px; border: 1px solid var(--line); border-radius: 50%; background: var(--parchment); color: var(--moss); }
+.trial-mark svg { width: 22px; height: 22px; }
+.trial-copy h2 { margin: 7px 0 8px; color: var(--ink); font: 600 26px/1.05 "Fraunces", Georgia, serif; }
+.trial-copy p { margin: 0; color: var(--ink-soft); font-size: 12.5px; line-height: 1.6; }
+.trial-card .primary-button, .trial-card .trial-state { grid-column: 1 / -1; justify-self: start; margin-top: 4px; }
+.trial-state { display: inline-flex; align-items: center; gap: 6px; padding: 9px 13px; border-radius: 10px; background: var(--moss-pale); color: var(--moss-dark); font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.trial-state svg { width: 15px; height: 15px; }
+.trial-state.muted { background: var(--parchment); color: var(--muted); }
+.trial-card.done .trial-mark { border-color: var(--moss); background: var(--moss); color: white; animation: node-stamp 520ms var(--ease-out) both; }
+.trial-card.locked { opacity: .72; }
+.trial-card.locked .trial-mark { color: var(--muted); }
+
+.trial-run-head { padding: 21px 19px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); box-shadow: var(--shadow-soft); animation: card-rise 460ms var(--ease-out) both; }
+.trial-run-head h1 { margin: 8px 0 9px; color: var(--ink); font: 600 clamp(32px, 8vw, 46px)/.98 "Fraunces", Georgia, serif; }
+.trial-run-head > p { max-width: 480px; margin: 0; color: var(--ink-soft); font-size: 13px; line-height: 1.6; }
+.trial-bar { display: inline-flex; align-items: center; gap: 7px; margin-top: 16px; padding: 8px 12px; border: 1px solid color-mix(in srgb, var(--gold) 50%, var(--line)); border-radius: 999px; background: var(--gold-pale); color: #8a6410; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.trial-bar svg { width: 14px; height: 14px; color: var(--gold); }
+@media (min-width: 620px) {
+  .trial-card { grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; padding: 26px; }
+  .trial-card .primary-button, .trial-card .trial-state { grid-column: auto; justify-self: end; margin-top: 0; }
+  .trial-run-head { padding: 30px; }
+}
+.theme-night .trial-mark { background: #102a34; }
+@media (prefers-reduced-motion: reduce) {
+  .trial-card, .trial-run-head, .trial-card.done .trial-mark { animation: none !important; opacity: 1 !important; transform: none !important; }
+  .trial-card.locked { opacity: .72 !important; }
+}
+
+/* --- Closed book ----------------------------------------------------------
+   The lesson leaves the page while the check is open, so this stands in its
+   place and says why. */
+.closed-book { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 15px; margin: 0 20px 4px; padding: 20px; border: 1px dashed color-mix(in srgb, var(--moss) 42%, var(--line)); border-radius: 15px; background: var(--parchment); animation: question-in 420ms var(--ease-out) both; }
+.closed-book-mark { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: var(--moss-pale); color: var(--moss-dark); }
+.closed-book-mark svg { width: 22px; height: 22px; }
+.closed-book h2 { margin: 7px 0 7px; color: var(--ink); font: 600 24px/1.05 "Fraunces", Georgia, serif; }
+.closed-book p { margin: 0; color: var(--ink-soft); font-size: 12.5px; line-height: 1.6; }
+@media (min-width: 620px) { .closed-book { margin: 0 30px 6px; padding: 24px; } }
+.theme-night .closed-book { background: #102a34; }
+
+/* A question that has come back from an earlier day says so. */
+.review-flag { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 10px; padding: 5px 10px; border: 1px solid color-mix(in srgb, var(--sky) 46%, var(--line)); border-radius: 999px; background: var(--sky-pale); color: var(--ink-soft); font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.review-flag svg { width: 12px; height: 12px; }
+.header-withheld { color: var(--muted); font-style: italic; }
