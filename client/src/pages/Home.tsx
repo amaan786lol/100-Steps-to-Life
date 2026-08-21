@@ -1365,6 +1365,25 @@ function LessonView({ lesson, quiz, stage, answers, setAnswers, quizStatus, onTa
   return (
     <div className="lesson-shell" key={lesson.day}>
       <div className="lesson-topline"><button className="back-button" onClick={onBack}><ArrowLeft aria-hidden="true" /> Back to today</button><span>DAY {String(lesson.day).padStart(2, "0")} / 100</span></div>
+      <ol className="day-steps" aria-label="Today’s sequence">
+        {([
+          { key: "read", label: "Read", note: "Take in the idea" },
+          { key: "quiz", label: "Recall", note: "Closed book" },
+          { key: "action", label: "Apply", note: "Name a real step" },
+          { key: "complete", label: "Reflect", note: "Carry it forward" },
+        ] as { key: LessonStage; label: string; note: string }[]).map((step, index) => {
+          const order: LessonStage[] = ["read", "quiz", "action", "complete"];
+          const at = order.indexOf(stage);
+          const here = order.indexOf(step.key);
+          return (
+            <li key={step.key} className={cn("day-step", here < at && "done", here === at && "current")}>
+              <span className="day-step-mark">{here < at ? <Check aria-hidden="true" /> : index + 1}</span>
+              <span className="day-step-label">{step.label}</span>
+              <small>{step.note}</small>
+            </li>
+          );
+        })}
+      </ol>
       <section className="lesson-header"><div><p className="eyebrow">{lesson.phase.shortTitle.toUpperCase()} · {lesson.phase.range.toUpperCase()}</p><h1>{lesson.title}</h1>{bookOpen ? <p>{lesson.why}</p> : <p className="header-withheld">Answering from memory — the lesson returns when the check is done.</p>}</div><div className="lesson-waypoint"><span>{String(lesson.day).padStart(2, "0")}</span><i /></div></section>
       <div className="lesson-layout">
         <article className="lesson-page">

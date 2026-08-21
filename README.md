@@ -12,13 +12,27 @@ Islam is the foundation of the curriculum, which also draws carefully on psychol
 
 Every lesson follows the same sequence:
 
-> **Learn → understand → prove → apply → reflect → improve.**
+> **Read → recall → apply → reflect.**
 
-A day cannot be completed by typing a reflection or pressing a button. The learner first passes a knowledge check, then records the real-world action they will take. Reflection helps carry the learning forward but is not treated as proof on its own.
+Those four steps are shown at the top of every day, so the sequence reads as a method rather than a screen to get through. A day cannot be completed by typing a reflection or pressing a button. The learner first passes a knowledge check, then records the real-world action they will take. Reflection helps carry the learning forward but is not treated as proof on its own.
 
-The check is not a formality. It runs one question at a time and grows with the course — ten questions on the first island, rising to fifteen on the Summit — and roughly seven in ten must be right to pass. Questions are built from each lesson's own wording, with the wrong options drawn from other lessons so they are plausible enough to need real discrimination, and correct answers are shuffled so position never gives the game away. Failing is not a dead end: the review screen shows each missed question with its answer and the reasoning behind it, then offers the check again.
+### The check is closed book
+
+While the check is open, the lesson is off the page. The teaching sections, the key idea, the example and the lesson's own "why" line are all withheld, because a question you can answer by scrolling up proves nothing. A test asserts it: it walks every question of a day and fails if any answerable lesson text is on screen.
+
+The check runs one question at a time and grows with the course — ten questions on the first island, rising to fifteen on the Summit — and roughly seven in ten must be right to pass. Each answer is marked as it is given, so a wrong choice shows what was right and why, straight away. Failing is not a dead end: a review screen lists every missed question with its answer and reasoning, then offers the check again.
+
+### Review is chosen from what you forgot
+
+A check made only of questions about the day just read tests short-term memory. Every day after the first also asks about earlier days — two questions on day two, rising to seven by day 100 — and which days come back is decided by the journal, not by chance. A day that has been missed is weighted sharply toward returning sooner and more often; a day answered cleanly several times drops back; a day unseen for a long time rises again on its own. Returning questions are labelled, so the repetition is visible.
+
+**Progress** shows the result as a retention record: every completed day as a cell coloured by how it has held up, headed *Retention, not completion*, with the days that have not held named plainly. A **practice** mode draws questions from exactly those days — no gate, no score — and practising there changes when that material returns.
+
+### Islands and the Summit
 
 At the end of every island a **recheck** draws eight questions from across its ten days. Passing it is what opens the passage to the next island, so moving on takes the whole stretch rather than the most recent lesson.
+
+The course ends on the **Summit quest**: two trials taken in order. The Trial of Recall asks fifteen questions from across all ten islands. The Trial of Judgment gives ten situations with no lesson in front of you, one per island, and asks what you would actually do.
 
 ## The island world
 
@@ -37,13 +51,13 @@ The 100 days are grouped into ten phases, each with its own island — a memory 
 | 9 | Common Ground | 81–90 | Leadership & Responsibility |
 | 10 | The Summit | 91–100 | Integration & Long-Term Life |
 
-Completing an island extends the route across water and resolves a bridge or passage. At full completion the separate islands reveal themselves as one connected world, and the Summit beacon becomes the **Final Test** — an assessment of judgment and application across the whole course, not simple lesson recall.
+Completing an island extends the route across water and resolves a bridge or passage. At full completion the separate islands reveal themselves as one connected world, and the Summit beacon becomes the **Summit quest** described above.
 
 The full design brief, including visual constraints and the shared interface language, is in [`ISLAND_WORLD.md`](ISLAND_WORLD.md).
 
 ## Local-first by design
 
-An account is never required to take the course. All meaningful progress — lessons, quizzes, actions, reflections, XP, achievements, and streaks — is written to `localStorage` in the browser, and the app shell is cached by a service worker so it reopens offline after one online visit.
+An account is never required to take the course. All meaningful progress — lessons, quizzes, actions, reflections, XP, achievements, streaks, and the recall record behind adaptive review — is written to `localStorage` in the browser, and the app shell is cached by a service worker so it reopens offline after one online visit.
 
 Signing in is purely additive: it enables an explicit backup of the local journal to the server and an explicit restore on another device. The server stores one JSON backup per user, capped at 150 KB, and never becomes the source of truth.
 
@@ -60,7 +74,8 @@ Three persistent appearance modes — Morning, Night, and Green — recolour the
 
 ```
 client/          React SPA
-  src/data/      the 100-day course content, quiz generation and rechecks
+  src/data/      course content, quiz generation, adaptive review, rechecks
+                 and the Summit trials
   src/pages/     Home, ComponentShowcase, NotFound
   src/components/ Map, DashboardLayout, AIChatBox, ui/ (shadcn)
   public/        PWA manifest, service worker
