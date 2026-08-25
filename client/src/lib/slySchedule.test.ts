@@ -102,14 +102,23 @@ describe("the shape of the day", () => {
     expect(habits[0].reason).toMatch(/gone quiet/i);
   });
 
-  it("words a habit you are cutting down as leaving it alone", () => {
+  it("does not give a habit you are cutting down an hour of its own", () => {
+    // "Leave scrolling alone at 15:00" is nonsense — it is an evening rule,
+    // so it is named at the boundary instead of scheduled as a job.
     const plan = build({ habits: [habit("late scrolling", [], "reduce")] });
-    expect(plan.blocks.find((block) => block.kind === "habit")!.action).toBe("Leave late scrolling alone");
+    expect(plan.blocks.filter((block) => block.kind === "habit")).toHaveLength(0);
+    const boundary = plan.blocks.find((block) => block.kind === "boundary")!;
+    expect(boundary.action).toContain("late scrolling");
+  });
+
+  it("still schedules the ones you are building", () => {
+    const plan = build({ habits: [habit("walk", []), habit("scrolling", [], "reduce")] });
+    expect(plan.blocks.filter((block) => block.kind === "habit").map((b) => b.action)).toEqual(["walk"]);
   });
 
   it("does not stack the whole list into one day", () => {
     const many = ["a", "b", "c", "d", "e"].map((name) => habit(name, []));
-    expect(build({ habits: many }).blocks.filter((block) => block.kind === "habit")).toHaveLength(2);
+    expect(build({ habits: many }).blocks.filter((block) => block.kind === "habit")).toHaveLength(3);
   });
 
   it("leaves habits already marked today out of the plan", () => {

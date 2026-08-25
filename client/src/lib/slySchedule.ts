@@ -21,6 +21,7 @@
 import { bookedHours, commitmentsAt, describeCommitment, firstFreeHour, type Commitment } from "./commitments";
 import { currentLocalDay, habitRun, type StoredHabit } from "./dailyCheckin";
 import { formatDuration, type ScreenTimeGoal } from "./screenTimeUsage";
+import { SALAH_MINUTES, clock as salahClock, hourIsClear, salahLine, type SalahTime } from "./salah";
 import { needsAttention, stillOpen } from "./slyVoice";
 
 export type ScheduleBlock = {
@@ -30,7 +31,7 @@ export type ScheduleBlock = {
   /** Why this block, in Sly's voice. */
   reason: string;
   /** What this block serves, so the interface can mark the lesson step. */
-  kind: "lesson" | "habit" | "boundary" | "check";
+  kind: "lesson" | "habit" | "boundary" | "check" | "salah";
 };
 
 export type SlyPlan = {
@@ -55,6 +56,8 @@ export type ScheduleInput = {
   goal: ScreenTimeGoal;
   /** Hours already spoken for — madressa, school, work. */
   commitments?: Commitment[];
+  /** The five prayers. The day is arranged around these, not beside them. */
+  salah?: SalahTime[];
   now?: Date;
 };
 
@@ -108,8 +111,22 @@ export function slySchedule(input: ScheduleInput): SlyPlan {
   const booked = bookedHours(commitments, now);
   const boundary = boundaryHour(weight);
 
-  /** The next hour that is both free and before the day closes. */
-  const freeFrom = (hour: number) => firstFreeHour(commitments, now, hour, boundary) ?? hour;
+  const salah = input.salah ?? [];
+
+  /**
+   * The next hour that is free of a commitment, clear of a prayer, and before
+   * the day closes. Work goes in the gaps between fixed points, not on top of
+   * them.
+   */
+  const freeFrom = (hour: number) => {
+    for (let candidate = hour; candidate < boundary; candidate++) {
+      const free = firstFreeHour(commitments, now, candidate, boundary);
+      if (free === null) break;
+      if (hourIsClear(salah, free)) return free;
+      candidate = free;
+    }
+    return firstFreeHour(commitments, now, hour, boundary) ?? hour;
+  };
 
   // After a heavy day the lesson goes early, before the day fills up again —
   // but never on top of something already booked. A step scheduled into a room
@@ -138,13 +155,19 @@ export function slySchedule(input: ScheduleInput): SlyPlan {
   // The slipping habit first: it is the one least likely to happen by itself.
   const ordered = slipping ? [slipping, ...open.filter((habit) => habit.id !== slipping.id)] : open;
 
+  // Habits you are cutting down are not hour-long jobs — "leave scrolling
+  // alone at 15:00" is nonsense. They belong to the evening, and they are
+  // named at the boundary instead of given a block of their own.
+  const toDo = ordered.filter((habit) => habit.mode === "build");
+  const toAvoid = ordered.filter((habit) => habit.mode === "reduce");
+
   let nextHabitHour = lessonHour;
-  ordered.slice(0, 2).forEach((habit) => {
+  toDo.slice(0, 3).forEach((habit) => {
     const run = habitRun(habit, now);
     nextHabitHour = freeFrom(nextHabitHour + 3);
     blocks.push({
       time: clock(nextHabitHour),
-      action: habit.mode === "reduce" ? `Leave ${habit.name} alone` : habit.name,
+      action: habit.name,
       reason: habit === slipping
         ? "This one has gone quiet. Putting it at a fixed time is usually what restarts it."
         : run >= 2
@@ -154,9 +177,20 @@ export function slySchedule(input: ScheduleInput): SlyPlan {
     });
   });
 
+  for (const prayer of salah) {
+    blocks.push({
+      time: salahClock(prayer.at),
+      action: prayer.name,
+      reason: salahLine(prayer),
+      kind: "salah",
+    });
+  }
+
   blocks.push({
     time: clock(boundary),
-    action: "Phone down for the night",
+    action: toAvoid.length
+      ? `Phone down for the night — and ${toAvoid.map((habit) => habit.name.toLowerCase()).join(", ")} with it`
+      : "Phone down for the night",
     reason: weight === "well-over"
       ? "Earlier than you will want. It is the one lever that actually moves tomorrow's number."
       : weight === "over"
@@ -173,6 +207,8 @@ export function slySchedule(input: ScheduleInput): SlyPlan {
     reason: "Whatever happened. The record is only useful if it is honest.",
     kind: "check",
   });
+
+  blocks.sort((a, b) => a.time.localeCompare(b.time));
 
   const todaysCommitments = commitments.filter((item) => item.days.length === 0 || item.days.includes(now.getDay()));
 
