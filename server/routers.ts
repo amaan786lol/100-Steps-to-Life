@@ -4,6 +4,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { courseProgressPayloadSchema } from "./progressSchema";
+import { buildLeavePlan, buildSchedule, leaveInputSchema, scheduleInputSchema } from "./coach";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -17,6 +18,12 @@ export const appRouter = router({
         success: true,
       } as const;
     }),
+  }),
+  coach: router({
+    // Public: the coach helps whether or not someone has signed in, in keeping
+    // with the course never putting an account between a learner and the work.
+    schedule: publicProcedure.input(scheduleInputSchema).mutation(({ input }) => buildSchedule(input)),
+    leavePlan: publicProcedure.input(leaveInputSchema).mutation(({ input }) => buildLeavePlan(input)),
   }),
   progress: router({
     get: protectedProcedure.query(async ({ ctx }) => {
