@@ -16,9 +16,21 @@
         tools:ignore="ProtectedPermissions" />
 
     <!--
-      There is deliberately no INTERNET permission. The course is bundled in the
-      APK and the usage figures never leave the device; without this permission
-      that is enforced by the system rather than promised in a README.
+      There is deliberately no INTERNET permission, and adding one would not
+      currently buy anything.
+
+      The AI planner and review are protected procedures: they need a signed-in
+      user. Sign-in is OAuth, and the redirect URI is built from
+      window.location.origin — which inside this app is the asset loader's
+      placeholder domain, not a real host. The callback could never come back,
+      so the AI features cannot work from bundled assets however many
+      permissions are granted.
+
+      Making them work means loading the course from its real deployed origin
+      rather than from the APK, which is a different design and needs that URL.
+      Until then, this permission would weaken a real guarantee — that usage
+      data never leaves the device, enforced by the system — in exchange for
+      nothing. Sly builds today's schedule on the device instead.
     -->
 
     <application

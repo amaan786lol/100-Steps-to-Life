@@ -40,7 +40,10 @@ describe("Habit Studio daily workflow", () => {
 
     expect((screen.getByPlaceholderText("Example: I will protect my evening by putting my phone away after dinner.") as HTMLTextAreaElement).value).toBe("");
     expect((screen.getByPlaceholderText("e.g. 6400") as HTMLInputElement).value).toBe("");
-    expect(screen.getByText("Walk").closest(".habit-row")?.classList.contains("done")).toBe(false);
+    // Scoped to the habit list: the name also appears in Sly's plan for today.
+    const walkRow = document.querySelector(".habit-list")!.querySelector(".habit-row")!;
+    expect(walkRow.textContent).toContain("Walk");
+    expect(walkRow.classList.contains("done")).toBe(false);
 
     fireEvent.change(screen.getByPlaceholderText("Example: I will protect my evening by putting my phone away after dinner."), { target: { value: "Protect the evening" } });
     fireEvent.click(screen.getByRole("button", { name: "Create today’s plan" }));

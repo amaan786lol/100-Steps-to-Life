@@ -1200,3 +1200,26 @@ textarea:focus { border-color: var(--moss); box-shadow: 0 0 0 3px rgba(53, 106, 
 .screen-time-empty > .sly-fox { flex: 0 0 42px; width: 42px; height: 42px; }
 .screen-time-empty p { margin: 0 0 11px; color: var(--ink-soft); font-size: 12.5px; line-height: 1.55; }
 @media (prefers-reduced-motion: reduce) { .screen-time-bar em { transition: none; } }
+
+/* --- Sly's plan for today -------------------------------------------------
+ * Built on the device from yesterday's measured screen time. This is the plan
+ * that works in the Android app, where the AI planner cannot reach a server.
+ * ------------------------------------------------------------------------ */
+.sly-plan { position: relative; }
+.sly-plan-head { display: flex; gap: 13px; align-items: flex-start; margin: 5px 0 14px; }
+.sly-plan-head > .sly-fox { flex: 0 0 40px; width: 40px; height: 40px; }
+.sly-plan-head p { margin: 0; color: var(--ink-soft); font-size: 12.5px; line-height: 1.55; }
+.sly-plan > h3 { margin: 0 0 15px; padding-bottom: 13px; border-bottom: 1px solid var(--line); color: var(--ink); font: 600 21px/1.2 "Fraunces", Georgia, serif; }
+.sly-plan-blocks { display: grid; gap: 12px; margin: 0 0 15px; padding: 0; list-style: none; }
+.sly-plan-blocks li { display: grid; grid-template-columns: 62px 1fr; gap: 11px; }
+.sly-plan-blocks span { display: flex; gap: 4px; align-items: center; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .03em; }
+.sly-plan-blocks span svg { width: 11px; height: 11px; }
+.sly-plan-blocks strong { display: block; color: var(--ink); font-size: 13.5px; line-height: 1.3; }
+.sly-plan-blocks p { margin: 3px 0 0; color: var(--ink-soft); font-size: 11.5px; line-height: 1.45; }
+.sly-plan-blocks .block-lesson span { color: var(--moss); }
+.sly-plan-blocks .block-lesson strong { color: var(--moss-dark); }
+.sly-plan-blocks .block-boundary span { color: var(--clay); }
+.sly-plan-notes { display: grid; gap: 7px; padding-top: 13px; border-top: 1px dashed var(--line); }
+.sly-plan-notes p { margin: 0; color: var(--ink-soft); font-size: 12px; line-height: 1.5; }
+.sly-plan-notes b { color: var(--ink); }
+.sly-plan > small { display: block; margin-top: 12px; color: var(--muted); font-size: 10.5px; line-height: 1.45; }
