@@ -1,10 +1,16 @@
 package life.hundredsteps.app
 
 import android.annotation.SuppressLint
+import android.content.ActivityNotFoundException
+import android.net.Uri
 import android.os.Bundle
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.webkit.WebViewAssetLoader
 
@@ -22,9 +28,27 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
 
+    /**
+     * The page waiting for a file. A WebView does nothing at all when an
+     * `<input type="file">` is tapped unless the host app answers
+     * onShowFileChooser — the tap is simply swallowed, with no error anywhere.
+     */
+    private var pendingFile: ValueCallback<Array<Uri>>? = null
+    private lateinit var chooseFile: ActivityResultLauncher<String>
+
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Registered before the WebView exists: this has to happen while the
+        // activity is still being created, or the launcher throws.
+        chooseFile = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            // A cancelled picker must still answer, with null. Dropping the
+            // callback leaves the input permanently unresponsive — the page
+            // believes a chooser is still open and will not raise another.
+            pendingFile?.onReceiveValue(if (uri == null) null else arrayOf(uri))
+            pendingFile = null
+        }
 
         val assetLoader = WebViewAssetLoader.Builder()
             .setDomain(APP_DOMAIN)
@@ -43,6 +67,27 @@ class MainActivity : AppCompatActivity() {
                     assetLoader.shouldInterceptRequest(request.url)
             }
 
+            webChromeClient = object : WebChromeClient() {
+                override fun onShowFileChooser(
+                    view: WebView,
+                    callback: ValueCallback<Array<Uri>>,
+                    params: FileChooserParams,
+                ): Boolean {
+                    // Abandon any earlier request rather than leaking it.
+                    pendingFile?.onReceiveValue(null)
+                    pendingFile = callback
+                    return try {
+                        chooseFile.launch(mimeTypeFor(params))
+                        true
+                    } catch (error: ActivityNotFoundException) {
+                        // No picker on the device: tell the page so, rather
+                        // than leaving the input dead.
+                        pendingFile = null
+                        false
+                    }
+                }
+            }
+
             addJavascriptInterface(ScreenTimeBridge(this@MainActivity), ScreenTimeBridge.NAME)
             loadUrl("https://$APP_DOMAIN/assets/index.html")
         }
@@ -58,8 +103,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        // Release a page still waiting on a chooser, so nothing is left hanging.
+        pendingFile?.onReceiveValue(null)
+        pendingFile = null
         webView.destroy()
         super.onDestroy()
+    }
+
+    /** Honour the input's own `accept`, rather than always offering everything. */
+    private fun mimeTypeFor(params: WebChromeClient.FileChooserParams): String {
+        val accepted = params.acceptTypes.orEmpty().filter { it.isNotBlank() }
+        return when {
+            accepted.isEmpty() -> "*/*"
+            accepted.all { it.startsWith("image/") } -> "image/*"
+            accepted.size == 1 -> accepted.first()
+            else -> "*/*"
+        }
     }
 
     private companion object {
