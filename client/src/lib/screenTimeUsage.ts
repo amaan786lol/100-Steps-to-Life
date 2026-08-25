@@ -31,6 +31,15 @@ export type DailyScreenTime = {
   discounted?: number;
   /** Why, in their own words. */
   note?: string;
+  /**
+   * Minutes spent watching in a browser, reported by the userscript. Kept
+   * apart from `minutes` on purpose: that figure is every app on the device,
+   * this one is a single browser, and adding them would double-count the
+   * overlap while hiding what neither of them can see.
+   */
+  watchMinutes?: number;
+  /** Shorts counted in the browser that day. */
+  shorts?: number;
 };
 
 /**

@@ -39,6 +39,8 @@ export const defaultWatchSettings: WatchSettings = {
 };
 
 export type WatchSession = {
+  /** Unique to this session, so a report cannot be counted twice. */
+  id: string;
   startedAt: number;
   /** The last moment the learner demonstrably did something. */
   lastActivityAt: number;
@@ -52,7 +54,12 @@ export type WatchSession = {
   interruptionsShown: number;
 };
 
-export const startSession = (now = Date.now()): WatchSession => ({
+/**
+ * `id` is passed in rather than generated here so this stays pure and the
+ * userscript can use whatever the browser gives it.
+ */
+export const startSession = (now = Date.now(), id = `s-${now}`): WatchSession => ({
+  id,
   startedAt: now,
   lastActivityAt: now,
   shortIds: [],
@@ -138,6 +145,8 @@ export function interruptionLine(shorts: number): string {
 /* --- What the session reports back ----------------------------------------- */
 
 export type WatchReport = {
+  /** The session this came from. Reports are deduplicated on it. */
+  id: string;
   date: string;
   minutes: number;
   shorts: number;
@@ -158,6 +167,7 @@ export function reportOf(
   const settled = settleIdle(session, settings, now);
   if (!settled.endedAt) return null;
   return {
+    id: settled.id,
     date: localDay(new Date(settled.startedAt)),
     minutes: sessionMinutes(settled, settings, now),
     shorts: shortsWatched(settled),
