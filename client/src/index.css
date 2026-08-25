@@ -1101,3 +1101,75 @@ textarea:focus { border-color: var(--moss); box-shadow: 0 0 0 3px rgba(53, 106, 
 .lesson-anchor-use:active { transform: scale(.98); }
 @media (min-width: 620px) { .lesson-anchor { grid-template-columns: minmax(0, 1fr) auto; align-items: center; } .lesson-anchor-use { justify-self: end; } }
 @media (prefers-reduced-motion: reduce) { .lesson-anchor { animation: none !important; opacity: 1 !important; transform: none !important; } .lesson-anchor-use { transition: none; } }
+
+/* --- Sly ------------------------------------------------------------------
+ * The fox who runs the habit side. He floats above the page, can be dragged
+ * anywhere, and steps in front of it when a stretch has run long. His coat
+ * takes the theme so he belongs in morning, night and green alike.
+ * ------------------------------------------------------------------------ */
+:root { --sly-coat: #c4714f; --sly-inner: #f6d9c6; --sly-face: #fdf3e4; --sly-eye: #2b1d16; }
+.theme-night { --sly-coat: #b4643f; --sly-inner: #6d3c2c; --sly-face: #f2e2cd; --sly-eye: #21150f; }
+.theme-green { --sly-coat: #c07545; --sly-inner: #f2ddc8; --sly-face: #fbf5e6; --sly-eye: #23301f; }
+
+.sly-fox { width: 100%; height: 100%; display: block; }
+.sly-fox .sly-ears { transform-origin: 32px 30px; transition: transform 200ms var(--ease-out); }
+.sly-fox.mood-asking .sly-ears { transform: rotate(-4deg); }
+.sly-fox.mood-resting .sly-eyes { opacity: .28; }
+.sly-fox.mood-pleased .sly-eyes { transform: translateY(-1px); }
+
+/* The holder is the size of the fox and nothing more. The bubble is taken out
+   of flow deliberately: while he is placed by `top`, a bubble in normal flow
+   pushed him down by its own height and off the bottom of the screen. */
+.sly-holder { position: fixed; z-index: 60; right: 16px; bottom: 92px; width: 62px; height: 62px; }
+.sly-handle { display: grid; place-items: center; width: 62px; height: 62px; padding: 7px; border: 1px solid var(--line); border-radius: 20px; background: var(--paper); box-shadow: var(--shadow); cursor: grab; touch-action: none; transition: transform 180ms var(--ease-out), box-shadow 180ms var(--ease-out); }
+.sly-handle:active { cursor: grabbing; transform: scale(.95); }
+/* While the interruption is up, the small fox is both redundant and sitting on
+   top of his own button. The card is him; one of him is enough. */
+.sly-holder.phase-due { display: none; }
+.sly-holder.phase-resting .sly-handle { border-color: var(--sky); }
+.sly-timer { position: absolute; right: -5px; bottom: -6px; padding: 2px 6px; border-radius: 7px; background: var(--ink); color: white; font: 800 10px/1.3 "Manrope", sans-serif; font-style: normal; }
+.sly-handle { position: relative; }
+
+.sly-bubble { position: absolute; right: 0; bottom: calc(100% + 9px); display: grid; gap: 6px; width: min(272px, calc(100vw - 34px)); padding: 14px 15px; border: 1px solid var(--line); border-radius: 16px 16px 5px 16px; background: var(--paper); box-shadow: var(--shadow); animation: sly-say 220ms var(--ease-out); }
+.sly-bubble strong { color: var(--ink); font: 600 15px/1.2 "Fraunces", Georgia, serif; }
+.sly-bubble p { margin: 0; color: var(--ink-soft); font-size: 12px; line-height: 1.5; }
+.sly-bubble small { color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .04em; }
+.sly-bubble .plain-button { justify-self: start; padding: 6px 0; border: 0; background: transparent; color: var(--moss); font-size: 11px; font-weight: 800; cursor: pointer; }
+
+/* Clear of the mobile tab bar: Sly interrupts the screen, not the way out of
+   it. Below 620px the tab bar is the only navigation there is. */
+.sly-holder.below .sly-bubble { top: calc(100% + 9px); bottom: auto; border-radius: 16px 5px 16px 16px; }
+/* Anchored to whichever side of him has room: a bubble hung to the left of a
+   fox parked on the left edge simply runs off the screen. */
+.sly-holder.start .sly-bubble { right: auto; left: 0; border-radius: 16px 16px 16px 5px; }
+.sly-holder.start.below .sly-bubble { border-radius: 5px 16px 16px 16px; }
+
+.sly-interrupt { position: fixed; z-index: 70; right: 0; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); left: 0; display: grid; justify-items: center; padding: 0 14px; animation: sly-step-in 260ms var(--ease-out); }
+@media (min-width: 620px) { .sly-interrupt { bottom: 16px; } }
+.sly-interrupt-card { display: flex; gap: 15px; width: min(560px, 100%); padding: 19px 20px; border: 1px solid var(--line); border-radius: 20px; background: var(--paper); box-shadow: var(--shadow); }
+.sly-interrupt-card > .sly-fox { flex: 0 0 54px; width: 54px; height: 54px; }
+.sly-interrupt-card h3 { margin: 5px 0 7px; font-size: 21px; line-height: 1.05; }
+.sly-interrupt-card p { margin: 0 0 13px; color: var(--ink-soft); font-size: 12px; line-height: 1.55; }
+.sly-interrupt-actions { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; }
+.sly-interrupt-actions .plain-button { border: 0; background: transparent; color: var(--muted); font-size: 12px; font-weight: 800; cursor: pointer; }
+
+/* Sly hosting the habit page: his line sits at the top, in his voice. */
+.sly-host { display: flex; gap: 15px; align-items: flex-start; padding: 17px 18px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); box-shadow: var(--shadow-soft); }
+.sly-host > .sly-fox { flex: 0 0 46px; width: 46px; height: 46px; }
+.sly-host strong { display: block; margin: 4px 0 6px; color: var(--ink); font: 600 20px/1.1 "Fraunces", Georgia, serif; }
+.sly-host p { margin: 0; color: var(--ink-soft); font-size: 13px; line-height: 1.55; }
+.sly-host-more { display: grid; gap: 9px; margin-top: 12px; padding-top: 11px; border-top: 1px dashed var(--line); }
+.sly-host-more div { display: grid; gap: 2px; }
+.sly-host-more b { color: var(--ink); font-size: 12px; }
+.sly-host-more span { color: var(--ink-soft); font-size: 11px; line-height: 1.45; }
+.sly-aside { margin: 0; color: var(--muted); font-size: 11px; font-style: italic; line-height: 1.45; }
+/* The row around this one is uppercase label text. Sly is speaking, so his
+   line has to opt out of it — a sentence in caps reads as being shouted at. */
+.habit-record .sly-said { flex-basis: 100%; margin-top: 2px; color: var(--muted); font-size: 10.5px; font-weight: 600; font-style: normal; letter-spacing: 0; line-height: 1.4; text-transform: none; }
+
+@keyframes sly-say { from { opacity: 0; transform: translateY(6px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes sly-step-in { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .sly-bubble, .sly-interrupt { animation: none; }
+  .sly-fox .sly-ears { transition: none; }
+}

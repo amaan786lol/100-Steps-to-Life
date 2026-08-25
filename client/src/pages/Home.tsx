@@ -40,6 +40,7 @@ import {
   Zap,
 } from "lucide-react";
 import { HabitPlanner } from "@/components/HabitPlanner";
+import { SlyCompanion } from "@/components/Sly";
 import { RECHECK_LENGTH, buildRecheck, buildTrial, finalTrials, getLesson, lessons, passMark, phases, reviewSlotsFor, selectReview, totalQuestionsForDay, type CoursePhase, type Lesson, type QuizQuestion, type RecallRecord } from "../data/course";
 
 const STORAGE_KEY = "hundred-steps-to-life-v1";
@@ -579,6 +580,9 @@ export default function Home() {
   return (
     <main className={cn("field-app", `theme-${theme}`)}>
       <a className="skip-link" href="#main-content">Skip to today’s content</a>
+      {/* Sly rides along on every view: a long stretch at the screen is a long
+          stretch wherever you happen to be standing in the course. */}
+      <SlyCompanion />
       <div className="sky" aria-hidden="true">
         <div className="sky-body" />
         <div className="sky-glow" />
