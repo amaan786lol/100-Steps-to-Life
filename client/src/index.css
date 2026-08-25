@@ -1072,3 +1072,21 @@ textarea:focus { border-color: var(--moss); box-shadow: 0 0 0 3px rgba(53, 106, 
   }
   .mobile-tabbar button.active svg { transform: none; }
 }
+
+/* --- The record a habit has built ---------------------------------------- */
+.habit-body { display: grid; gap: 3px; min-width: 0; }
+.habit-record { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 9px; color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.habit-record b { color: var(--moss-dark); }
+.habit-record b.quiet { color: var(--muted); font-weight: 700; }
+.habit-week { display: inline-flex; gap: 2px; font-style: normal; }
+.habit-week em { display: block; width: 7px; height: 7px; border: 1px solid var(--line); border-radius: 2px; background: transparent; transition: background-color 220ms var(--ease-out), border-color 220ms var(--ease-out); }
+.habit-week em.kept { border-color: var(--moss); background: var(--moss); }
+.habit-record small { color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: .04em; }
+
+/* --- Yesterday, carried into today --------------------------------------- */
+.carried-review { display: grid; grid-template-columns: 20px minmax(0, 1fr) 24px; gap: 10px; align-items: start; margin: 0 0 14px; padding: 13px 14px; border: 1px solid color-mix(in srgb, var(--sky) 46%, var(--line)); border-left: 3px solid var(--sky); border-radius: 12px; background: var(--sky-pale); animation: plan-in 420ms var(--ease-out) both; }
+.carried-review > svg { width: 17px; height: 17px; margin-top: 1px; color: var(--sky); }
+.carried-review span { display: block; margin-bottom: 4px; color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .1em; }
+.carried-review p { margin: 0; color: var(--ink-soft); font-size: 12.5px; line-height: 1.5; }
+.carried-review .plain-icon svg { width: 15px; height: 15px; }
+.theme-night .carried-review { background: #14303a; }

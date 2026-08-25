@@ -2,8 +2,16 @@ import { z } from "zod";
 
 const habitSchema = z.object({ name: z.string().trim().min(1).max(90), mode: z.enum(["build", "reduce"]) });
 
+/** What yesterday's Screen Time review concluded, carried into today's plan. */
+const yesterdaySchema = z.object({
+  overview: z.string().trim().max(600),
+  oneChange: z.string().trim().max(400),
+  reviewedOn: z.string().trim().max(40).optional(),
+});
+
 export const plannerInputSchema = z.object({
   priority: z.string().trim().min(3).max(500),
+  yesterday: yesterdaySchema.optional(),
   habits: z.array(habitSchema).max(12),
   stepTarget: z.number().int().min(0).max(100000).optional(),
   stepsSoFar: z.number().int().min(0).max(100000).optional(),

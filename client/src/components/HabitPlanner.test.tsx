@@ -68,6 +68,51 @@ describe("Habit Studio daily workflow", () => {
     expect(reviewMutate).toHaveBeenCalledTimes(1);
   });
 
+  it("carries yesterday's review into today's plan, and lets it be dropped", async () => {
+    // A review recorded today is what tomorrow's plan should be built on.
+    localStorage.setItem("hundred-steps-yesterday-review-v1", JSON.stringify({
+      review: { overview: "Long evening stretches on the phone.", evidence: "Screenshot supplied.", oneChange: "Park the phone in the hall after Maghrib.", note: "No shame." },
+      reviewedOn: new Date().toLocaleDateString("en-CA"),
+    }));
+    render(<HabitPlanner />);
+
+    // It shows in the carried-in banner above the plan button, and the restored
+    // review is on the page too, so scope the assertion to the banner.
+    expect(document.querySelector(".carried-review p")?.textContent).toBe("Park the phone in the hall after Maghrib.");
+    fireEvent.change(screen.getByPlaceholderText("Example: I will protect my evening by putting my phone away after dinner."), { target: { value: "Protect the evening" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create today’s plan" }));
+    expect(createMutate).toHaveBeenCalledWith(expect.objectContaining({
+      yesterday: expect.objectContaining({ oneChange: "Park the phone in the hall after Maghrib." }),
+    }));
+
+    // Dropping it must genuinely remove it from the next request.
+    createMutate.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Do not use yesterday’s review for today" }));
+    fireEvent.click(screen.getByRole("button", { name: "Create today’s plan" }));
+    expect(createMutate.mock.calls[0][0].yesterday).toBeUndefined();
+  });
+
+  it("ignores a review too old to be yesterday", () => {
+    localStorage.setItem("hundred-steps-yesterday-review-v1", JSON.stringify({
+      review: { overview: "Old.", evidence: "-", oneChange: "Stale advice.", note: "-" },
+      reviewedOn: "2020-01-01",
+    }));
+    render(<HabitPlanner />);
+    expect(screen.queryByText("Stale advice.")).toBeNull();
+  });
+
+  it("records a kept habit so it survives to the next morning", () => {
+    render(<HabitPlanner />);
+    fireEvent.change(screen.getByLabelText("New habit"), { target: { value: "Walk after school" } });
+    fireEvent.click(screen.getByLabelText("Add habit"));
+    fireEvent.click(screen.getByLabelText("Mark Walk after school done"));
+
+    const today = new Date().toLocaleDateString("en-CA");
+    const saved = JSON.parse(localStorage.getItem("hundred-steps-habit-studio-v1") ?? "{}");
+    expect(saved.habits[0].log[today]).toBe(true);
+    expect(screen.getByText("1-day run")).toBeTruthy();
+  });
+
   it("fills the wellbeing fields from a watch screenshot, and only what was read", async () => {
     render(<HabitPlanner />);
     const watchInput = screen.getByLabelText("Samsung Health screenshot") as HTMLInputElement;
