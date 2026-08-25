@@ -39,6 +39,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import { HabitPlanner } from "@/components/HabitPlanner";
 import { RECHECK_LENGTH, buildRecheck, buildTrial, finalTrials, getLesson, lessons, passMark, phases, reviewSlotsFor, selectReview, totalQuestionsForDay, type CoursePhase, type Lesson, type QuizQuestion, type RecallRecord } from "../data/course";
 
 const STORAGE_KEY = "hundred-steps-to-life-v1";
@@ -62,7 +63,7 @@ const ISLAND_IMAGES: Record<number, string> = {
   10: "/media/island-summit.svg",
 };
 
-type View = "today" | "map" | "achievements" | "progress" | "takeaways" | "lesson" | "recheck" | "practice" | "final";
+type View = "today" | "map" | "habits" | "achievements" | "progress" | "takeaways" | "lesson" | "recheck" | "practice" | "final";
 type LessonStage = "read" | "quiz" | "action" | "complete";
 type QuizResult = { score: number; passed: boolean; perfect: boolean };
 type Theme = "morning" | "night" | "green";
@@ -75,7 +76,7 @@ function getPreviewTheme(): Theme | undefined {
 
 function getPreviewView(): View | undefined {
   const requested = new URLSearchParams(window.location.search).get("view");
-  return requested === "today" || requested === "map" || requested === "achievements" || requested === "progress" || requested === "takeaways" || requested === "lesson" || requested === "final" ? requested : undefined;
+  return requested === "today" || requested === "map" || requested === "habits" || requested === "achievements" || requested === "progress" || requested === "takeaways" || requested === "lesson" || requested === "final" ? requested : undefined;
 }
 
 type AppData = {
@@ -591,6 +592,7 @@ export default function Home() {
         <nav className="rail-nav">
           <NavButton icon={HomeIcon} label="Today" active={view === "today"} onClick={() => chooseView("today")} />
           <NavButton icon={Map} label="Course map" active={view === "map"} onClick={() => chooseView("map")} />
+          <NavButton icon={Sprout} label="Habits" active={view === "habits"} onClick={() => chooseView("habits")} />
           <NavButton icon={Award} label="Achievements" active={view === "achievements"} onClick={() => chooseView("achievements")} />
           <NavButton icon={Target} label="Progress" active={view === "progress"} onClick={() => chooseView("progress")} />
           <NavButton icon={PencilLine} label="Takeaways" active={view === "takeaways"} onClick={() => chooseView("takeaways")} />
@@ -629,6 +631,7 @@ export default function Home() {
           {notice && <div className="notice" role="status"><CircleHelp aria-hidden="true" />{notice}</div>}
           {view === "today" && <TodayView data={data} lesson={todayLesson} coursePercent={coursePercent} onStart={startToday} onMap={() => chooseView("map")} onAchievements={() => chooseView("achievements")} account={{ loading: authLoading, signedIn: isAuthenticated, name: user?.name ?? undefined, hasBackup: Boolean(backupQuery.data), saving: backupMutation.isPending }} onSignIn={() => startLogin()} onSaveBackup={saveBackup} onRestoreBackup={restoreBackup} onLogout={logout} />}
           {view === "map" && <CourseMap data={data} onOpen={openLesson} onFinal={openFinalTest} onRecheck={openRecheck} />}
+          {view === "habits" && <HabitPlanner />}
           {view === "achievements" && <AchievementsView achievements={achievements} data={data} />}
           {view === "progress" && <ProgressView data={data} coursePercent={coursePercent} accuracy={accuracy} onPractise={openPractice} />}
           {view === "takeaways" && <TakeawaysView data={data} onStart={startToday} />}
@@ -694,6 +697,7 @@ export default function Home() {
         <nav className="mobile-tabbar" aria-label="Mobile primary navigation">
           <MobileNavButton icon={HomeIcon} label="Today" active={view === "today"} onClick={() => chooseView("today")} />
           <MobileNavButton icon={Map} label="Journey" active={view === "map"} onClick={() => chooseView("map")} />
+          <MobileNavButton icon={Sprout} label="Habits" active={view === "habits"} onClick={() => chooseView("habits")} />
           <MobileNavButton icon={Target} label="Progress" active={view === "progress"} onClick={() => chooseView("progress")} />
         </nav>
       </section>
