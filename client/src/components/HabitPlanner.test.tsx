@@ -92,6 +92,24 @@ describe("Habit Studio daily workflow", () => {
     expect(createMutate.mock.calls[0][0].yesterday).toBeUndefined();
   });
 
+  it("builds the plan around the course day the learner is standing on", () => {
+    localStorage.setItem("hundred-steps-to-life-v1", JSON.stringify({ currentDay: 3 }));
+    render(<HabitPlanner />);
+
+    expect(screen.getByText(/DAY 03/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Use this as today’s priority" }));
+    fireEvent.click(screen.getByRole("button", { name: "Create today’s plan" }));
+    const sent = createMutate.mock.calls[0][0];
+    expect(sent.lesson).toMatchObject({ day: 3 });
+    // The lesson's own step becomes the priority when the learner asks for it.
+    expect(sent.priority).toBe(sent.lesson.actionPrompt);
+  });
+
+  it("falls back to day one when no course journal exists yet", () => {
+    render(<HabitPlanner />);
+    expect(screen.getByText(/DAY 01/)).toBeTruthy();
+  });
+
   it("ignores a review too old to be yesterday", () => {
     localStorage.setItem("hundred-steps-yesterday-review-v1", JSON.stringify({
       review: { overview: "Old.", evidence: "-", oneChange: "Stale advice.", note: "-" },

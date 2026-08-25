@@ -9,8 +9,18 @@ const yesterdaySchema = z.object({
   reviewedOn: z.string().trim().max(40).optional(),
 });
 
+/** Today's course lesson, so the plan is built around the step it asks for. */
+const lessonSchema = z.object({
+  day: z.number().int().min(1).max(100),
+  title: z.string().trim().max(120),
+  keyIdea: z.string().trim().max(400),
+  actionPrompt: z.string().trim().max(400),
+  island: z.string().trim().max(80).optional(),
+});
+
 export const plannerInputSchema = z.object({
   priority: z.string().trim().min(3).max(500),
+  lesson: lessonSchema.optional(),
   yesterday: yesterdaySchema.optional(),
   habits: z.array(habitSchema).max(12),
   stepTarget: z.number().int().min(0).max(100000).optional(),
