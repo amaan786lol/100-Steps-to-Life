@@ -5,7 +5,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { courseProgressPayloadSchema } from "./progressSchema";
 import { invokeLLM } from "./_core/llm";
-import { plannerInputSchema, screenTimeReviewInputSchema } from "./plannerSchema";
+import { plannerInputSchema, screenTimeReviewInputSchema, watchReadInputSchema } from "./plannerSchema";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -50,6 +50,27 @@ export const appRouter = router({
       const content = response.choices[0]?.message.content;
       if (typeof content !== "string") throw new Error("The planner returned an unreadable response.");
       return { plan: JSON.parse(content) as Record<string, unknown> };
+    }),
+    readWatch: protectedProcedure.input(watchReadInputSchema).mutation(async ({ input }) => {
+      const response = await invokeLLM({
+        model: "gpt-5-mini",
+        maxTokens: 400,
+        messages: [
+          { role: "system", content: "You read figures off a Samsung Health or Galaxy Watch screenshot so they can be typed into a check-in automatically. Report only what is legibly shown. Use null for anything you cannot read with confidence — never estimate, infer, or fill a gap. steps and stepTarget are whole numbers of steps for the day shown. sleepHours is last night's total sleep in hours, as a decimal. Put anything the user should know in note, in one short sentence, such as which day the screenshot appears to cover. Do not comment on whether the numbers are good, and do not give health advice." },
+          { role: "user", content: [
+            { type: "text", text: "Read the steps, step goal and sleep from this screenshot." },
+            { type: "image_url", image_url: { url: input.watchImage, detail: "low" } },
+          ] },
+        ],
+        outputSchema: {
+          name: "watch_reading", strict: true, schema: { type: "object", additionalProperties: false, properties: {
+            steps: { type: ["integer", "null"] }, stepTarget: { type: ["integer", "null"] }, sleepHours: { type: ["number", "null"] }, note: { type: "string" },
+          }, required: ["steps", "stepTarget", "sleepHours", "note"] },
+        },
+      });
+      const content = response.choices[0]?.message.content;
+      if (typeof content !== "string") throw new Error("The watch reading returned an unreadable response.");
+      return { reading: JSON.parse(content) as { steps: number | null; stepTarget: number | null; sleepHours: number | null; note: string } };
     }),
     reviewYesterday: protectedProcedure.input(screenTimeReviewInputSchema).mutation(async ({ input }) => {
       const response = await invokeLLM({

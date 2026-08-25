@@ -15,4 +15,9 @@ export const screenTimeReviewInputSchema = z.object({
   priority: z.string().trim().max(500).optional(),
 });
 
+/** A Samsung Health / Galaxy Watch screenshot to read figures from. */
+export const watchReadInputSchema = z.object({
+  watchImage: z.string().startsWith("data:image/").max(5_000_000),
+});
+
 export type PlannerInput = z.infer<typeof plannerInputSchema>;

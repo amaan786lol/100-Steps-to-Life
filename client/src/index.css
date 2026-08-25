@@ -7,24 +7,24 @@
 @import "tailwindcss";
 
 :root {
-  --ink: #172334;
-  --ink-soft: #344458;
-  --moss: #356a4b;
-  --moss-dark: #27573b;
-  --moss-pale: #e8f0e6;
-  --parchment: #fbf8ef;
-  --paper: #fffdf7;
-  --paper-deep: #f2eadb;
-  --clay: #c7795d;
-  --clay-pale: #fbede6;
-  --gold: #d6aa49;
-  --gold-pale: #fff6dc;
-  --sky: #7f9eab;
-  --sky-pale: #e8f0f2;
-  --line: #ded6c6;
-  --muted: #66717e;
-  --shadow: 0 18px 50px rgba(23, 35, 52, 0.09);
-  --shadow-soft: 0 8px 28px rgba(23, 35, 52, 0.07);
+  --ink: #16212f;
+  --ink-soft: #3a4a5c;
+  --moss: #336548;
+  --moss-dark: #234f36;
+  --moss-pale: #e6efe2;
+  --parchment: #fdf7ea;
+  --paper: #fffefb;
+  --paper-deep: #f4ead6;
+  --clay: #c4714f;
+  --clay-pale: #fbeae1;
+  --gold: #d9a63f;
+  --gold-pale: #fff5d6;
+  --sky: #7b9dab;
+  --sky-pale: #e7f0f2;
+  --line: #e3d9c6;
+  --muted: #6b7480;
+  --shadow: 0 18px 50px rgba(74, 55, 26, 0.11);
+  --shadow-soft: 0 8px 26px rgba(74, 55, 26, 0.08);
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
@@ -43,7 +43,11 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .skip-link { position: fixed; z-index: 100; top: 8px; left: 8px; padding: 10px 13px; border-radius: 8px; background: var(--ink); color: white; transform: translateY(-150%); transition: transform 160ms var(--ease-out); }
 .skip-link:focus { transform: translateY(0); }
 
-.field-app { min-height: 100vh; background: radial-gradient(circle at 80% 10%, rgba(214, 170, 73, .09), transparent 21rem), var(--parchment); }
+.field-app { min-height: 100vh; background: var(--parchment); }
+.field-app.theme-morning { background:
+  radial-gradient(circle at 84% 6%, rgba(247, 205, 122, .3), transparent 26rem),
+  radial-gradient(circle at 10% 88%, rgba(150, 176, 186, .16), transparent 30rem),
+  linear-gradient(178deg, #fffaf0 0%, var(--parchment) 42%); }
 .desktop-rail { display: none; }
 .app-shell { min-height: 100vh; }
 .topbar { position: sticky; z-index: 20; top: 0; display: flex; align-items: center; gap: 12px; min-height: 70px; padding: 12px 18px; border-bottom: 1px solid rgba(222, 214, 198, .8); background: rgba(251, 248, 239, .9); backdrop-filter: blur(16px); }
@@ -416,7 +420,10 @@ textarea:focus { border-color: var(--moss); box-shadow: 0 0 0 3px rgba(53, 106, 
 
 /* Morning remains the original sunlit parchment route. Night and Green are full environments, not simple colour inversions. */
 .field-app.theme-night { --ink: #e9f1ef; --ink-soft: #c3d4d1; --moss: #79c7a1; --moss-dark: #b7e0c7; --moss-pale: #183e38; --parchment: #09151e; --paper: #10222c; --paper-deep: #19333d; --clay: #dc9074; --clay-pale: #352724; --gold: #e1ba64; --gold-pale: #392f1c; --sky: #7ea7b4; --sky-pale: #19343f; --line: #2b4651; --muted: #92aca9; --shadow: 0 18px 50px rgba(0,0,0,.26); --shadow-soft: 0 8px 28px rgba(0,0,0,.2); background: radial-gradient(circle at 82% 9%, rgba(99, 173, 153, .12), transparent 23rem), var(--parchment); }
-.field-app.theme-green { --ink: #12382a; --ink-soft: #315848; --moss: #276b44; --moss-dark: #1b4b30; --moss-pale: #d9ead6; --parchment: #e6f0e3; --paper: #f7fbf3; --paper-deep: #d4e5d0; --clay: #a66e56; --clay-pale: #f6e5dc; --gold: #c99d41; --gold-pale: #fff4d6; --sky: #6d9887; --sky-pale: #e0eee8; --line: #bed3be; --muted: #567364; --shadow: 0 18px 50px rgba(20,68,43,.1); --shadow-soft: 0 8px 28px rgba(20,68,43,.08); background: radial-gradient(circle at 84% 10%, rgba(88, 142, 91, .16), transparent 24rem), var(--parchment); }
+.field-app.theme-green { --ink: #0e3124; --ink-soft: #2b5142; --moss: #226b42; --moss-dark: #17462d; --moss-pale: #cfe4ca; --parchment: #dcead7; --paper: #f3f9ee; --paper-deep: #c8ddc3; --clay: #9d6449; --clay-pale: #f2e0d4; --gold: #c1932f; --gold-pale: #fbf0cd; --sky: #5f9080; --sky-pale: #d8ebe3; --line: #b2cbb0; --muted: #4c6a5b; --shadow: 0 18px 50px rgba(14,49,36,.14); --shadow-soft: 0 8px 26px rgba(14,49,36,.1); background:
+  radial-gradient(circle at 86% 8%, rgba(214, 226, 150, .34), transparent 24rem),
+  radial-gradient(circle at 6% 92%, rgba(28, 82, 54, .16), transparent 30rem),
+  linear-gradient(176deg, #e7f2e1 0%, var(--parchment) 46%); }
 .theme-night .topbar { border-color: var(--line); background: rgba(9, 21, 30, .9); }.theme-night .desktop-rail { border-color: var(--line); background: #0c1a24; }.theme-night .rail-link { color: #91aaa9; }.theme-night .rail-link.active { background: #183e38; color: #b8e6c9; }.theme-night .rail-bottom-note p { color: var(--ink-soft); }.theme-night .brand-full-logo { filter: brightness(0) invert(1) sepia(.18) saturate(.65); }.theme-night .top-stat + .top-stat { border-color: var(--line); }.theme-night .icon-button, .theme-night .mobile-tabbar { border-color: var(--line); background: rgba(16,34,44,.96); color: var(--ink); }.theme-night .mobile-popover { border-color: var(--line); background: var(--paper); }.theme-night .mobile-popover button:hover { background: var(--paper-deep); }.theme-night .notice { border-color: #705c35; background: #2b281a; color: #f4d794; }.theme-night .hero-button, .theme-night .understood-card .primary-button, .theme-night .completion-card .primary-button { background: #dbeae2; color: #10242a; }.theme-night .journey-card, .theme-night .achievement-hero, .theme-night .understood-card, .theme-night .completion-card { background-color: #102a34; }.theme-night .route-node { background: #102a34; }.theme-night .map-surface { background-image: linear-gradient(180deg, rgba(16,34,44,.91), rgba(10,25,34,.97)), url('/media/course-map-landscape.jpg') !important; }.theme-night .path-node > span { border-color: #47616a; background: #152a35; box-shadow: 0 4px 0 #0a1921; color: var(--ink); }.theme-night .path-node.locked > span { border-color: #2a434e; background: #162832; box-shadow: 0 4px 0 #0d1c25; color: #6d8584; }.theme-night .field-note-wide { background: #1a3035; color: var(--ink); }.theme-night .field-note-wide > span { color: #e1ba64; }.theme-night .field-note-wide i { color: var(--muted); }.theme-night .bonus-area { background: #292719; }.theme-night textarea { border-color: #38525a; background: #0e2029; color: var(--ink); }.theme-night textarea::placeholder { color: #78908e; }.theme-night .answer-option { border-color: var(--line); background: #10222c; }.theme-night .answer-option:has(input:checked) { background: #183e38; }.theme-night .saved-note { background: #183e38; color: #cbe7d4; }.theme-night .reflection-card { background: #245b46; }.theme-night .course-ring { background: radial-gradient(closest-side, var(--parchment) 76%, transparent 77% 100%), conic-gradient(var(--moss) var(--progress), #29424a 0); }
 .theme-green .topbar { border-color: var(--line); background: rgba(230, 240, 227, .9); }.theme-green .desktop-rail { border-color: var(--line); background: rgba(239, 247, 235, .85); }.theme-green .today-hero { background-color: #153f2f; background-blend-mode: normal, multiply; }.theme-green .journey-card { background-color: #143d2f; }.theme-green .map-surface { background-image: linear-gradient(180deg, rgba(235,245,231,.85), rgba(226,239,221,.97)), url('/media/course-map-landscape.jpg') !important; }.theme-green .field-note-wide { background: #edf7e8; }.theme-green .reflection-card { background: #276b44; }.theme-green .hero-button { background: #eef4e7; }.theme-green .theme-choice.selected { background: #cfe4ce; }
 
@@ -997,3 +1004,71 @@ textarea:focus { border-color: var(--moss); box-shadow: 0 0 0 3px rgba(53, 106, 
 .theme-green .habit-hero::after { position: absolute; z-index: -1; right: -8%; bottom: -55%; width: 290px; height: 230px; border: 24px solid rgba(151,207,129,.12); border-radius: 52% 48% 61% 39%; content: ""; transform: rotate(-12deg); }
 @keyframes planner-orbit { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @keyframes habit-check-in { 0% { transform: scale(.98); } 55% { transform: scale(1.012); } 100% { transform: scale(1); } }
+/* --- Habit Studio motion --------------------------------------------------
+   The studio arrived with no motion of its own. These are responses to things
+   the person did — a habit added, a habit kept, a plan returned — not ambient
+   decoration. All of it stops under prefers-reduced-motion at the end. */
+
+/* A habit joins the list, and marking one lands. */
+.habit-row { animation: habit-in 380ms var(--ease-out) both; }
+.habit-row > button:first-child { transition: transform 180ms var(--ease-out), background-color 180ms var(--ease-out), border-color 180ms var(--ease-out); }
+.habit-row > button:first-child:active { transform: scale(.9); }
+.habit-row.done > button:first-child { animation: habit-tick 460ms var(--ease-out); }
+.habit-row.done p { animation: habit-settle 420ms var(--ease-out) both; }
+@keyframes habit-in { from { opacity: 0; transform: translateY(-6px) scale(.985); } to { opacity: 1; transform: none; } }
+@keyframes habit-tick { 0% { transform: scale(1); } 42% { transform: scale(1.22); } 100% { transform: scale(1); } }
+@keyframes habit-settle { from { opacity: .55; } to { opacity: 1; } }
+
+/* The mode toggle flips between building and reducing. */
+.mode-button { transition: transform 160ms var(--ease-out), background-color 200ms var(--ease-out), color 200ms var(--ease-out); }
+.mode-button:active { transform: scale(.95); }
+.mode-button svg { transition: transform 260ms var(--ease-out); }
+.mode-button[aria-pressed="false"] svg { transform: rotate(180deg); }
+
+/* A returned plan arrives a block at a time, so it reads as it lands. */
+.plan-output, .yesterday-output { animation: plan-in 460ms var(--ease-out) both; }
+.schedule-list article { animation: plan-in 440ms var(--ease-out) both; }
+.schedule-list article:nth-child(1) { animation-delay: 60ms; }
+.schedule-list article:nth-child(2) { animation-delay: 130ms; }
+.schedule-list article:nth-child(3) { animation-delay: 200ms; }
+.schedule-list article:nth-child(4) { animation-delay: 270ms; }
+.schedule-list article:nth-child(n+5) { animation-delay: 330ms; }
+@keyframes plan-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+/* The upload targets answer the pointer, and a duplicate says so. */
+.upload-trigger { transition: transform 160ms var(--ease-out), border-color 180ms var(--ease-out), background-color 180ms var(--ease-out); }
+.upload-trigger:hover:not(:disabled) { transform: translateY(-2px); }
+.upload-trigger:active:not(:disabled) { transform: translateY(0) scale(.99); }
+.upload-trigger:disabled { opacity: .6; }
+.screen-upload.duplicate strong { animation: duplicate-shake 480ms var(--ease-out); }
+@keyframes duplicate-shake { 0%, 100% { transform: translateX(0); } 22% { transform: translateX(-5px); } 48% { transform: translateX(4px); } 74% { transform: translateX(-2px); } }
+
+/* Reading a watch screenshot is the one slow step, so it shows it is working. */
+.watch-import { display: grid; gap: 9px; margin-top: 14px; }
+.watch-import input[type="file"] { display: none; }
+.watch-import p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
+.watch-import .upload-trigger:disabled { animation: reading-pulse 1.5s ease-in-out infinite; }
+@keyframes reading-pulse { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
+
+/* Changing mode should feel like light changing, not a repaint. */
+.field-app, .paper-card, .topbar, .desktop-rail, .mobile-tabbar {
+  transition: background-color 420ms var(--ease-out), border-color 420ms var(--ease-out), color 420ms var(--ease-out);
+}
+.mobile-tabbar button { transition: color 200ms var(--ease-out), transform 200ms var(--ease-out); }
+.mobile-tabbar button svg { transition: transform 260ms var(--ease-out); }
+.mobile-tabbar button.active svg { transform: translateY(-2px) scale(1.1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .habit-row, .habit-row.done > button:first-child, .habit-row.done p,
+  .plan-output, .yesterday-output, .schedule-list article,
+  .screen-upload.duplicate strong, .watch-import .upload-trigger:disabled {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .field-app, .paper-card, .topbar, .desktop-rail, .mobile-tabbar,
+  .mode-button, .mode-button svg, .upload-trigger, .mobile-tabbar button, .mobile-tabbar button svg {
+    transition: none !important;
+  }
+  .mobile-tabbar button.active svg { transform: none; }
+}
