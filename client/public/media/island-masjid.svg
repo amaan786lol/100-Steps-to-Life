@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img">
+  <rect width="1200" height="675" fill="#263e73"/>
+  <path d="M0 325 C170 280 250 355 410 312 C590 264 745 352 920 290 C1040 250 1124 280 1200 247 V675 H0Z" fill="#426ca2"/>
+  <path d="M0 470 C155 400 270 455 405 398 C575 325 735 454 880 388 C1022 324 1115 360 1200 326 V675 H0Z" fill="#7497a4"/>
+  <path d="M-30 590 C155 450 295 595 470 494 C655 387 750 580 905 467 C1030 382 1116 430 1230 335" fill="none" stroke="#e1b85c" stroke-width="12" stroke-linecap="round" stroke-dasharray="4 25" opacity=".9"/>
+  <path d="M0 613 C198 483 336 591 489 521 C660 442 752 607 919 494 C1046 408 1110 454 1200 391" fill="none" stroke="#1d3159" stroke-width="34" stroke-linecap="round" opacity=".24"/>
+  <g fill="#e0e9ed" opacity=".7"><circle cx="130" cy="185" r="4"/><circle cx="270" cy="131" r="3"/><circle cx="880" cy="139" r="4"/><circle cx="1060" cy="210" r="3"/></g>
+
+  <!-- Minaret, standing left of the prayer hall. -->
+  <path d="M356 430V286h44v144z" fill="#dfe8e9" stroke="#102b3a" stroke-width="14"/>
+  <path d="M350 300h56" stroke="#102b3a" stroke-width="12" stroke-linecap="round"/>
+  <path d="M378 286c-26 0-26-34 0-52 26 18 26 52 0 52z" fill="#e1b85c" stroke="#102b3a" stroke-width="12"/>
+
+  <!-- Prayer hall: a wide base under a dome, with an arched doorway. -->
+  <path d="M446 430V330h300v100z" fill="#dfe8e9" stroke="#102b3a" stroke-width="14"/>
+  <path d="M446 330c0-83 67-124 150-124s150 41 150 124z" fill="#dfe8e9" stroke="#102b3a" stroke-width="14"/>
+  <path d="M552 430v-52c0-25 20-44 44-44s44 19 44 44v52z" fill="#263e73" stroke="#102b3a" stroke-width="14"/>
+
+  <!-- Crescent above the dome. -->
+  <path d="M596 208v-24" stroke="#e1b85c" stroke-width="12" stroke-linecap="round"/>
+  <!-- A true crescent: one disc with a second, offset disc cut out of it. -->
+  <path fill-rule="evenodd" fill="#e1b85c"
+        d="M572 162a24 24 0 1 0 48 0 24 24 0 1 0-48 0z
+           M588 162a20 20 0 1 0 40 0 20 20 0 1 0-40 0z"/>
+
+  <!-- Moon and its companion, kept from the night this island already had. -->
+  <circle cx="882" cy="125" r="8" fill="#f7f1e2"/>
+  <circle cx="934" cy="168" r="5" fill="#f7f1e2"/>
+  <circle cx="730" cy="494" r="17" fill="#e1b85c"/>
+  <circle cx="730" cy="494" r="8" fill="#fff9e8"/>
+</svg>

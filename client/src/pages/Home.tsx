@@ -55,7 +55,7 @@ const ISLAND_IMAGES: Record<number, string> = {
   1: "/media/island-firstlight-cove.svg",
   2: "/media/island-lantern-gardens.svg",
   3: "/media/island-training-ridge.svg",
-  4: "/media/island-observatory.svg",
+  4: "/media/island-masjid.svg",
   5: "/media/island-bridgehaven.svg",
   6: "/media/island-wildwood-valley.svg",
   7: "/media/island-makers-quay.svg",

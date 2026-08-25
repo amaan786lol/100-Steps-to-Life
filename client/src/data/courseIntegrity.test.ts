@@ -83,7 +83,7 @@ describe("the later sections are still there", () => {
     ["Foundation", 1, 10],
     ["Mindset & Deen", 11, 20],
     ["Discipline & Habits", 21, 30],
-    ["Learning & Thinking", 31, 40],
+    ["Deen \u0026 Worship", 31, 40],
     ["Character & Relationships", 41, 50],
     ["Health & Energy", 51, 60],
     ["Skills & Creativity", 61, 70],
