@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { CircleAlert, RefreshCw, Smartphone } from "lucide-react";
 
 import { SlyFox } from "@/components/Sly";
-import { bridgeState, explainState, readTodayMinutes, type BridgeState } from "@/lib/screenTimeBridge";
+import { bridgeState, explainState, readDayMinutes, readTodayMinutes, type BridgeState } from "@/lib/screenTimeBridge";
 import {
   SCREEN_TIME_KEY,
   defaultGoal,
@@ -18,6 +18,8 @@ import {
 } from "@/lib/screenTimeUsage";
 
 const GOAL_KEY = "hundred-steps-screen-time-goal-v1";
+/** How far back to try. Android's raw event log rarely reaches beyond a week. */
+const BACKFILL_DAYS = 8;
 
 function loadGoal(): ScreenTimeGoal {
   try {
@@ -51,10 +53,27 @@ export function ScreenTimePanel() {
     }
     const today = readTodayMinutes();
     setMinutes(today);
-    if (today === null) return;
-    // Record it so a week's shape survives closing the app.
+
+    // Backfill the days the device still remembers, rather than starting from
+    // nothing and filling the week in one day at a time. Android keeps raw
+    // usage events for roughly a week, so the days before this was installed
+    // are readable — they just have to be asked for.
+    const now = new Date();
+    const measuredAt = now.toISOString();
+    const readings: DailyScreenTime[] = [];
+    if (today !== null) readings.push({ date: localDayKey(now), minutes: today, measuredAt });
+    for (let back = 1; back < BACKFILL_DAYS; back++) {
+      const day = new Date(now);
+      day.setDate(day.getDate() - back);
+      const minutes = readDayMinutes(day, now);
+      // null means the device would not say — leave it a gap rather than
+      // writing a 0 that cannot be told apart from a day spent on the phone.
+      if (minutes !== null) readings.push({ date: localDayKey(day), minutes, measuredAt });
+    }
+    if (!readings.length) return;
+
     setHistory((current) => {
-      const updated = recordDay(current, { date: localDayKey(), minutes: today, measuredAt: new Date().toISOString() });
+      const updated = readings.reduce((history, entry) => recordDay(history, entry), current);
       try {
         localStorage.setItem(SCREEN_TIME_KEY, JSON.stringify(updated));
       } catch {

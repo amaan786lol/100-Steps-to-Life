@@ -6,6 +6,7 @@ import {
   evaluateGoal,
   findDay,
   formatDuration,
+  dayWindow,
   localDayKey,
   mergeIntervals,
   readHistory,
@@ -90,6 +91,30 @@ describe("the day boundary", () => {
     const window = todayWindow(now);
     expect(window.start).toBe(at(0));
     expect(window.end).toBe(now.getTime());
+  });
+
+  it("covers a whole day, midnight to midnight", () => {
+    const window = dayWindow(new Date(2026, 2, 9, 15, 0), new Date(2026, 2, 10, 14, 0));
+    expect(window.start).toBe(new Date(2026, 2, 9).getTime());
+    expect(window.end).toBe(new Date(2026, 2, 10).getTime());
+  });
+
+  it("does not ask about a day that has not finished", () => {
+    const now = new Date(2026, 2, 10, 14, 30);
+    expect(dayWindow(now, now).end).toBe(now.getTime());
+  });
+
+  it("steps the date rather than adding 24 hours, for clock changes", () => {
+    // A local day either side of a clock change is 23 or 25 hours long, so a
+    // fixed 86,400,000 spills into the neighbouring day or cuts one short.
+    // Whatever this machine's zone does, the end must be the next midnight.
+    for (const day of [new Date(2026, 2, 29), new Date(2026, 9, 25), new Date(2026, 6, 1)]) {
+      const window = dayWindow(day, new Date(2027, 0, 1));
+      const nextMidnight = new Date(day);
+      nextMidnight.setHours(0, 0, 0, 0);
+      nextMidnight.setDate(nextMidnight.getDate() + 1);
+      expect(window.end).toBe(nextMidnight.getTime());
+    }
   });
 
   it("names the day by local date, not UTC", () => {

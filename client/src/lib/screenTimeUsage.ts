@@ -39,6 +39,21 @@ export function todayWindow(now = new Date()) {
 }
 
 /**
+ * The window covering one whole local day, never running past `now`.
+ *
+ * The end is found by stepping the date forward and taking local midnight
+ * again, rather than adding 24 hours: on the days either side of a clock
+ * change a local day is 23 or 25 hours long, and adding a fixed 86,400,000
+ * would spill an hour into the neighbouring day or cut one off.
+ */
+export function dayWindow(date: Date, now = new Date()) {
+  const start = startOfLocalDay(date);
+  const next = new Date(start);
+  next.setDate(next.getDate() + 1);
+  return { start, end: Math.min(startOfLocalDay(next), now.getTime()) };
+}
+
+/**
  * An interval is only usable if both ends are real numbers and it moves
  * forwards. This is checked before any clamping: clamping an infinite end to
  * "now" would turn a broken reading into a plausible-looking twelve hours.

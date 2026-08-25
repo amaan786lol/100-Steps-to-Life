@@ -84,12 +84,12 @@ describe("with access granted", () => {
     expect(screen.getByText(/Not completed/)).toBeTruthy();
   });
 
-  it("writes the day into the record so a week survives a restart", () => {
+  it("writes today into the record so the week survives a restart", () => {
     withUsage([[at(7), at(8)]]);
     render(<ScreenTimePanel />);
     const stored = JSON.parse(localStorage.getItem("hundred-steps-screen-time-daily-v1") ?? "[]");
-    expect(stored).toHaveLength(1);
-    expect(stored[0].minutes).toBe(60);
+    const today = stored.find((day: { date: string }) => day.date === new Date().toLocaleDateString("en-CA"));
+    expect(today.minutes).toBe(60);
   });
 
   it("keeps a changed limit", () => {
@@ -104,5 +104,68 @@ describe("with access granted", () => {
     withUsage([]);
     render(<ScreenTimePanel />);
     expect(screen.getByText("0m")).toBeTruthy();
+  });
+});
+
+describe("filling in the days before it was installed", () => {
+  /** Serve a different answer per requested window, keyed by the day it starts in. */
+  const perDay = (minutesByOffset: Record<number, number | null>) => {
+    const midnight = (offset: number) => {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() + offset);
+      return d.getTime();
+    };
+    install({
+      hasPermission: () => true,
+      requestPermission: vi.fn(),
+      readUsage: (start: number) => {
+        for (const [offset, mins] of Object.entries(minutesByOffset)) {
+          if (start === midnight(Number(offset))) {
+            // null stands for "the device no longer remembers this day".
+            return mins === null ? "[]" : JSON.stringify([[start, start + mins * 60_000]]);
+          }
+        }
+        return "[]";
+      },
+    });
+  };
+
+  it("reads the retained days on first open instead of one per day", () => {
+    perDay({ 0: 45, [-1]: 120, [-2]: 90 });
+    render(<ScreenTimePanel />);
+    const stored = JSON.parse(localStorage.getItem("hundred-steps-screen-time-daily-v1") ?? "[]");
+    expect(stored).toHaveLength(3);
+    expect(stored.map((d: { minutes: number }) => d.minutes).sort((a: number, b: number) => a - b)).toEqual([45, 90, 120]);
+  });
+
+  it("leaves a forgotten day as a gap rather than recording a false zero", () => {
+    // A day aged out of Android's event log looks identical to an untouched
+    // phone, so it must not be written down as 0 hours.
+    perDay({ 0: 45, [-1]: null, [-2]: 90 });
+    render(<ScreenTimePanel />);
+    const stored = JSON.parse(localStorage.getItem("hundred-steps-screen-time-daily-v1") ?? "[]");
+    expect(stored).toHaveLength(2);
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    expect(stored.find((d: { date: string }) => d.date === yesterday.toLocaleDateString("en-CA"))).toBeUndefined();
+  });
+
+  it("keeps today's genuine zero, which is a real reading", () => {
+    perDay({ 0: 0, [-1]: 60 });
+    render(<ScreenTimePanel />);
+    const stored = JSON.parse(localStorage.getItem("hundred-steps-screen-time-daily-v1") ?? "[]");
+    const today = stored.find((d: { date: string }) => d.date === new Date().toLocaleDateString("en-CA"));
+    expect(today.minutes).toBe(0);
+  });
+
+  it("does not overwrite a day already recorded with a later reading", () => {
+    perDay({ 0: 45, [-1]: 120 });
+    render(<ScreenTimePanel />);
+    const first = JSON.parse(localStorage.getItem("hundred-steps-screen-time-daily-v1")!);
+    cleanup();
+    render(<ScreenTimePanel />);
+    const second = JSON.parse(localStorage.getItem("hundred-steps-screen-time-daily-v1")!);
+    expect(second).toHaveLength(first.length);
   });
 });

@@ -12,7 +12,7 @@
  * live in `screenTimeUsage.ts`, which is tested independently of any of this.
  */
 
-import { activeMinutes, todayWindow, type UsageInterval } from "./screenTimeUsage";
+import { activeMinutes, dayWindow, todayWindow, type UsageInterval } from "./screenTimeUsage";
 
 /** What the Kotlin side exposes. Every method is synchronous across the bridge. */
 type NativeScreenTime = {
@@ -118,6 +118,31 @@ export function readTodayMinutes(now = new Date()): number | null {
   const window = todayWindow(now);
   const intervals = readUsage(window);
   return intervals === null ? null : activeMinutes(intervals, window);
+}
+
+/**
+ * A past day's figure, or null when the device cannot tell us.
+ *
+ * The distinction between "not retained" and "not used" is the whole
+ * difficulty here. Android keeps raw usage events for a limited window — about
+ * a week on most devices — and once they age out a query returns nothing at
+ * all, which is indistinguishable from a phone that sat untouched.
+ *
+ * So a past day with no intervals is reported as null, not as zero. Recording
+ * a confident 0 for a day that was actually spent on the phone would put a
+ * false figure in the record permanently, and the record is meant to be
+ * something the learner can trust. A gap says "not known", which is true
+ * either way.
+ *
+ * Today is different and is handled by [readTodayMinutes]: the app is running
+ * and reading live, so a genuine zero there is a real observation.
+ */
+export function readDayMinutes(date: Date, now = new Date()): number | null {
+  const window = dayWindow(date, now);
+  if (window.end <= window.start) return null;
+  const intervals = readUsage(window);
+  if (intervals === null || intervals.length === 0) return null;
+  return activeMinutes(intervals, window);
 }
 
 /** What to tell the learner about why there is no figure. */

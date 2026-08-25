@@ -5,6 +5,7 @@ import {
   explainState,
   isNativeAvailable,
   parseIntervals,
+  readDayMinutes,
   readTodayMinutes,
   readUsage,
   requestPermission,
@@ -156,5 +157,45 @@ describe("what the learner is told", () => {
   it("says what to do when access is only ungranted", () => {
     expect(explainState({ kind: "needs-permission" })).toMatch(/Usage Access/);
     expect(explainState({ kind: "needs-permission" })).toMatch(/leaves the device/);
+  });
+});
+
+describe("reading a past day", () => {
+  const now = new Date(2026, 2, 10, 14, 0);
+  const yesterday = new Date(2026, 2, 9, 12, 0);
+  const on = (day: number, hour: number, minute = 0) => new Date(2026, 2, day, hour, minute).getTime();
+
+  const withUsage = (raw: string) =>
+    install({ hasPermission: () => true, requestPermission: vi.fn(), readUsage: () => raw });
+
+  it("adds up a whole past day", () => {
+    withUsage(JSON.stringify([[on(9, 8), on(9, 9, 30)], [on(9, 20), on(9, 21)]]));
+    expect(readDayMinutes(yesterday, now)).toBe(150);
+  });
+
+  it("reports a day the device has forgotten as unknown, not as zero", () => {
+    // Android keeps raw events for about a week. Once they age out the query
+    // returns nothing, which is indistinguishable from an untouched phone —
+    // so writing a confident 0 would put a false figure in the record.
+    withUsage("[]");
+    expect(readDayMinutes(yesterday, now)).toBeNull();
+  });
+
+  it("is unknown without a bridge or without access", () => {
+    expect(readDayMinutes(yesterday, now)).toBeNull();
+    install({ hasPermission: () => false, requestPermission: vi.fn(), readUsage: () => "[[1,2]]" });
+    expect(readDayMinutes(yesterday, now)).toBeNull();
+  });
+
+  it("does not count a session belonging to the neighbouring day", () => {
+    // The bridge is asked for one day's window; anything outside is clipped.
+    withUsage(JSON.stringify([[on(8, 22), on(9, 0, 45)], [on(9, 23, 30), on(10, 1)]]));
+    expect(readDayMinutes(yesterday, now)).toBe(75);
+  });
+
+  it("refuses a day that has not started yet", () => {
+    const tomorrow = new Date(2026, 2, 11, 9, 0);
+    withUsage(JSON.stringify([[on(11, 8), on(11, 9)]]));
+    expect(readDayMinutes(tomorrow, now)).toBeNull();
   });
 });
