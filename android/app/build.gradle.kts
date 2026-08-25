@@ -16,7 +16,32 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        /**
+         * A debug key kept in the repository, on purpose.
+         *
+         * Android refuses to install an APK over one signed by a different
+         * key, and a CI runner generates a fresh debug keystore every run — so
+         * without this, each new build could only be installed by uninstalling
+         * the old one first, which deletes the course record along with it.
+         *
+         * This is safe to commit. It carries the standard, universally known
+         * debug credentials, and every Android developer's default debug key
+         * is equally public. It cannot sign a Play Store release, which needs
+         * a separate upload key that should never be committed anywhere.
+         */
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+        }
         release {
             // Left unminified for now: this is a debug-signed build people
             // sideload to try, and an unreadable stack trace from a stripped
