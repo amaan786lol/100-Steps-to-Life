@@ -157,7 +157,7 @@ export function slyBriefing(context: SlyContext): SlySpeech[] {
       topic: "empty",
       headline: "Nothing on the list yet.",
       detail: lesson
-        ? `Start with one thing. Today's lesson asks you to ${lowerFirst(lesson.actionPrompt)} — that is a fine first habit.`
+        ? `Start with one thing. Today's lesson asks you to ${asClause(lesson.actionPrompt)} — that is a fine first habit.`
         : "Start with one thing worth protecting, or one pattern you would rather do less of. One is enough.",
     });
     return speech;
@@ -229,4 +229,12 @@ export function slyGreeting(now = new Date()): string {
   return "Evening. Time to look back at it honestly.";
 }
 
-const lowerFirst = (text: string) => (text ? text[0].toLowerCase() + text.slice(1) : text);
+/**
+ * Fold a sentence into the middle of one of Sly's. Lowercases the first letter
+ * and drops the full stop, so splicing a lesson prompt in does not produce
+ * "...matters to you. — that is a fine first habit."
+ */
+const asClause = (text: string) => {
+  const trimmed = text.trim().replace(/[.!]+$/, "");
+  return trimmed ? trimmed[0].toLowerCase() + trimmed.slice(1) : trimmed;
+};
