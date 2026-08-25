@@ -99,8 +99,16 @@ describe("the later sections are still there", () => {
   });
 });
 
-describe("Character & Relationships teaches doing, not only reflecting", () => {
-  const section = lessons.filter((lesson) => lesson.day >= 41 && lesson.day <= 50);
+/**
+ * Two stretches of the course teach social and speaking skill by practice:
+ * days 41-50, and days 72-80. Both are held to the same bar — real missions,
+ * scenario questions, and presentation kept away from appearance.
+ */
+describe.each([
+  ["Character & Relationships", 41, 50],
+  ["Speaking & Presence", 72, 80],
+])("%s teaches doing, not only reflecting", (_name, from, to) => {
+  const section = lessons.filter((lesson) => lesson.day >= from && lesson.day <= to);
 
   it("asks the learner to do something real on every day", () => {
     for (const lesson of section) {
@@ -140,7 +148,8 @@ describe("Character & Relationships teaches doing, not only reflecting", () => {
       const text = [lesson.title, lesson.why, lesson.lesson, lesson.keyIdea, lesson.example, lesson.actionPrompt,
         lesson.actionHint, lesson.bonus,
         ...lesson.quiz.flatMap((question) => [question.question, ...question.options, question.explanation])].join(" ");
-      // "good-looking" appears once, inside an explicit denial that it matters.
+      // Where such a word appears at all, it must sit inside an explicit
+      // denial that it is what matters.
       const offending = text.match(appearance) ?? [];
       for (const hit of offending) {
         expect(text, `day ${lesson.day} uses "${hit}"`).toMatch(
