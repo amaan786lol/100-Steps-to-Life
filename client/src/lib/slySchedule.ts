@@ -18,6 +18,7 @@
  * unmeasured rather than guessed at.
  */
 
+import { bookedHours, commitmentsAt, describeCommitment, firstFreeHour, type Commitment } from "./commitments";
 import { currentLocalDay, habitRun, type StoredHabit } from "./dailyCheckin";
 import { formatDuration, type ScreenTimeGoal } from "./screenTimeUsage";
 import { needsAttention, stillOpen } from "./slyVoice";
@@ -52,6 +53,8 @@ export type ScheduleInput = {
   /** Yesterday's total, or null when the device could not say. */
   yesterdayMinutes: number | null;
   goal: ScreenTimeGoal;
+  /** Hours already spoken for — madressa, school, work. */
+  commitments?: Commitment[];
   now?: Date;
 };
 
@@ -97,18 +100,32 @@ function readingFor(minutes: number | null, goal: ScreenTimeGoal, weight: Weight
 export function slySchedule(input: ScheduleInput): SlyPlan {
   const { lesson, habits, yesterdayMinutes, goal } = input;
   const now = input.now ?? new Date();
+  const commitments = input.commitments ?? [];
   const weight = weighYesterday(yesterdayMinutes, goal);
   const blocks: ScheduleBlock[] = [];
 
   const heavy = weight === "well-over" || weight === "over";
-  // After a heavy day the lesson goes early, before the day fills up again.
-  const lessonHour = heavy ? 9 : 10;
+  const booked = bookedHours(commitments, now);
+  const boundary = boundaryHour(weight);
+
+  /** The next hour that is both free and before the day closes. */
+  const freeFrom = (hour: number) => firstFreeHour(commitments, now, hour, boundary) ?? hour;
+
+  // After a heavy day the lesson goes early, before the day fills up again —
+  // but never on top of something already booked. A step scheduled into a room
+  // the learner is already sitting in is a step that will not happen.
+  const lessonHour = freeFrom(heavy ? 9 : 10);
 
   if (lesson) {
+    const moved = booked.has(heavy ? 9 : 10);
     blocks.push({
       time: clock(lessonHour),
       action: lesson.actionPrompt,
-      reason: `Day ${lesson.day}, ${lesson.title}. This is the one block worth protecting${heavy ? " — and early, before yesterday's shape repeats itself" : ""}.`,
+      reason: `Day ${lesson.day}, ${lesson.title}. This is the one block worth protecting${
+        moved
+          ? `, moved clear of ${commitmentsAt(commitments, now, heavy ? 9 : 10).map((item) => item.name).join(" and ")}`
+          : heavy ? " — and early, before yesterday's shape repeats itself" : ""
+      }.`,
       kind: "lesson",
     });
   }
@@ -121,10 +138,12 @@ export function slySchedule(input: ScheduleInput): SlyPlan {
   // The slipping habit first: it is the one least likely to happen by itself.
   const ordered = slipping ? [slipping, ...open.filter((habit) => habit.id !== slipping.id)] : open;
 
-  ordered.slice(0, 2).forEach((habit, index) => {
+  let nextHabitHour = lessonHour;
+  ordered.slice(0, 2).forEach((habit) => {
     const run = habitRun(habit, now);
+    nextHabitHour = freeFrom(nextHabitHour + 3);
     blocks.push({
-      time: clock(lessonHour + 3 + index * 3),
+      time: clock(nextHabitHour),
       action: habit.mode === "reduce" ? `Leave ${habit.name} alone` : habit.name,
       reason: habit === slipping
         ? "This one has gone quiet. Putting it at a fixed time is usually what restarts it."
@@ -136,7 +155,7 @@ export function slySchedule(input: ScheduleInput): SlyPlan {
   });
 
   blocks.push({
-    time: clock(boundaryHour(weight)),
+    time: clock(boundary),
     action: "Phone down for the night",
     reason: weight === "well-over"
       ? "Earlier than you will want. It is the one lever that actually moves tomorrow's number."
@@ -149,15 +168,20 @@ export function slySchedule(input: ScheduleInput): SlyPlan {
   });
 
   blocks.push({
-    time: clock(boundaryHour(weight) + 1),
+    time: clock(boundary + 1),
     action: "Mark today off",
     reason: "Whatever happened. The record is only useful if it is honest.",
     kind: "check",
   });
 
+  const todaysCommitments = commitments.filter((item) => item.days.length === 0 || item.days.includes(now.getDay()));
+
   return {
     focus: lesson ? lesson.actionPrompt : open[0]?.name ?? "Pick one thing worth protecting today.",
-    reading: readingFor(yesterdayMinutes, goal, weight),
+    reading: readingFor(yesterdayMinutes, goal, weight)
+      + (todaysCommitments.length
+        ? ` Today already holds ${todaysCommitments.map(describeCommitment).join(" and ")}, so this fits around it.`
+        : ""),
     blocks,
     friction: heavy
       ? "Charge the phone outside the room you sleep in tonight. Distance does more than willpower."
