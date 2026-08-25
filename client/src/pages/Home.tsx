@@ -810,7 +810,7 @@ function FirstlightCove({ onStart }: { onStart: () => void }) {
     <div className="cove-copy"><span className="eyebrow">YOUR OPENING ISLAND</span><h2>Firstlight<br /><em>Cove.</em></h2><p>A calm place to begin: notice where you are, choose a direction, and take one honest step inland.</p><div className="cove-meta"><span>FOUNDATION</span><i /> <span>DAYS 1–10</span></div></div>
     <div className="cove-map" aria-label="Firstlight Cove route with Day 1 active">
       <div className="cove-water" aria-hidden="true" /><div className="cove-stars" aria-hidden="true" /><div className="cove-sun" aria-hidden="true" /><div className="cove-clouds" aria-hidden="true" /><div className="cove-shore" aria-hidden="true" /><div className="cove-trees" aria-hidden="true" /><div className="cove-trail" aria-hidden="true" />
-      {coveRoute.map((spot, index) => index === 0 ? <button className="cove-waypoint current" key={index} style={spot} onClick={onStart} aria-label="Open Day 1: Arrival"><span>01</span><small>Arrival</small></button> : <span className="cove-waypoint locked" key={index} style={spot} aria-label={`Day ${index + 1}, locked`}><span>{String(index + 1).padStart(2, "0")}</span></span>)}
+      {coveRoute.map((spot, index) => index === 0 ? <button className="cove-waypoint current" key={index} style={spot} onClick={onStart} aria-label={`Open Day 1: ${getLesson(1).title}`}><span>01</span><small>{getLesson(1).title.split(",")[0]}</small></button> : <span className="cove-waypoint locked" key={index} style={spot} aria-label={`Day ${index + 1}, locked`}><span>{String(index + 1).padStart(2, "0")}</span></span>)}
     </div>
   </section>;
 }
