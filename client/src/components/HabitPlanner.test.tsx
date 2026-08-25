@@ -24,6 +24,9 @@ import { HabitPlanner } from "./HabitPlanner";
 
 beforeEach(() => {
   localStorage.clear();
+  // These exercise the studio, not the first run. Without this the setup
+  // screen quite correctly takes the page instead.
+  localStorage.setItem("hundred-steps-commitments-v1", "[]");
   createMutate.mockClear();
   reviewMutate.mockClear();
   watchMutate.mockClear();

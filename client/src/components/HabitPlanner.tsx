@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from "react";
-import { Check, ChevronRight, CircleAlert, ImageUp, Minus, Plus, RotateCcw, Sparkles, Trash2, Watch, X } from "lucide-react";
+import { Check, ChevronRight, CircleAlert, ImageUp, Minus, Plus, RotateCcw, Settings, Sparkles, Trash2, Watch, X } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
@@ -9,6 +9,8 @@ import { slyNote, slyOnMark } from "@/lib/slyVoice";
 import { SlyFox } from "@/components/Sly";
 import { ScreenTimePanel } from "@/components/ScreenTimePanel";
 import { SlyDayPlan } from "@/components/SlyDayPlan";
+import { HabitSetup, dismissSetup, saveSetup, type SetupResult } from "@/components/HabitSetup";
+import { setupStage } from "@/lib/commitments";
 import { announceHabitChange, useSlyBriefing } from "@/lib/slyContext";
 import { getLesson } from "@/data/course";
 
@@ -71,6 +73,9 @@ export function HabitPlanner() {
   const [carriedInto, setCarriedInto] = useState<StoredReview | null>(carried);
   const [message, setMessage] = useState("");
   const [slyReply, setSlyReply] = useState("");
+  // "fresh" on a first open, "dismissed" once skipped, "done" after setup.
+  const [stage, setStage] = useState(() => setupStage(localStorage));
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const watchRef = useRef<HTMLInputElement>(null);
   const generate = trpc.planner.create.useMutation({ onSuccess: (data) => setPlan(data.plan as DailyPlan), onError: () => setMessage("The morning planner could not respond right now. Your local check-in is still saved.") });
@@ -110,6 +115,14 @@ export function HabitPlanner() {
   const briefing = useSlyBriefing();
   const leading = briefing[0];
 
+  function applySetup(result: SetupResult) {
+    saveSetup(result, KEY);
+    setHabits(result.habits as Habit[]);
+    setStage("done");
+    setSettingsOpen(false);
+    announceHabitChange();
+  }
+
   function snapshot(next: Partial<LocalPlan> = {}) { return { date: currentLocalDay(), habits, priority, stepTarget: stepTarget ? Number(stepTarget) : undefined, stepsSoFar: stepsSoFar ? Number(stepsSoFar) : undefined, sleepHours: sleepHours ? Number(sleepHours) : undefined, ...next }; }
   function persist(next: Partial<LocalPlan> = {}) { localStorage.setItem(KEY, JSON.stringify(snapshot(next))); announceHabitChange(); }
   function addHabit() { const name = newHabit.trim(); if (!name) return; const next = [...habits, { id: crypto.randomUUID(), name, mode, done: false }]; setHabits(next); setNewHabit(""); persist({ habits: next }); }
@@ -121,8 +134,33 @@ export function HabitPlanner() {
   function requestPlan() { persist(); if (!requireSignIn()) return; if (priority.trim().length < 3) { setMessage("Write one honest priority for today first." ); return; } generate.mutate({ priority, lesson: todaysLesson ?? undefined, habits: habits.map(({ name, mode }) => ({ name, mode })), stepTarget: stepTarget ? Number(stepTarget) : undefined, stepsSoFar: stepsSoFar ? Number(stepsSoFar) : undefined, sleepHours: sleepHours ? Number(sleepHours) : undefined, yesterday: carriedInto ? { overview: carriedInto.review.overview, oneChange: carriedInto.review.oneChange, reviewedOn: carriedInto.reviewedOn } : undefined }); }
   function requestReview() { const state = reviewSubmissionState(screenshot, reusedScreenshot); if (!state.allowed || !screenshot) { setMessage(state.message); return; } if (!requireSignIn()) return; reviewYesterday.mutate({ screenTimeImage: screenshot, priority: priority || undefined }); }
 
+  const courseDay = todaysLesson?.day ?? 1;
+
+  if (stage === "fresh" && !settingsOpen) {
+    return <div className="view-stack habit-studio">
+      <HabitSetup
+        mode="steps"
+        habits={habits}
+        courseDay={courseDay}
+        onSave={applySetup}
+        onSkip={() => { dismissSetup(); setStage("dismissed"); }}
+      />
+    </div>;
+  }
+
+  if (settingsOpen) {
+    return <div className="view-stack habit-studio">
+      <HabitSetup mode="all" habits={habits} courseDay={courseDay} onSave={applySetup} onClose={() => setSettingsOpen(false)} />
+    </div>;
+  }
+
   return <div className="view-stack habit-studio">
-    <section className="habit-hero"><div><span className="eyebrow-light"><Sparkles /> SLY IS KEEPING THE RECORD</span><h1>Choose today.<br/><em>He will hold you to it kindly.</em></h1><p>Sly watches the habits, the runs and the clock so you do not have to. Everything stays on this device; he is the only one keeping score, and he does not keep score.</p></div><Watch aria-hidden="true" /></section>
+    <section className="habit-hero"><div><span className="eyebrow-light"><Sparkles /> SLY IS KEEPING THE RECORD</span><h1>Choose today.<br/><em>He will hold you to it kindly.</em></h1><p>Sly watches the habits, the runs and the clock so you do not have to. Everything stays on this device; he is the only one keeping score, and he does not keep score.</p></div><button className="studio-settings" aria-label="Setup and settings" onClick={() => setSettingsOpen(true)}><Settings /></button><Watch aria-hidden="true" /></section>
+    {stage === "dismissed" && <button className="setup-offer" onClick={() => setSettingsOpen(true)}>
+      <Settings aria-hidden="true" />
+      <span><strong>Tell Sly when you are busy.</strong> He will plan around school, madressa or work instead of on top of it.</span>
+      <ChevronRight aria-hidden="true" />
+    </button>}
     <section className="sly-host"><SlyFox mood={leading.topic === "done" ? "pleased" : leading.topic === "slipping" ? "asking" : "watching"} /><div><span className="eyebrow">SLY</span><strong>{leading.headline}</strong><p>{leading.detail}</p>{briefing.length > 1 && <div className="sly-host-more">{briefing.slice(1).map(item => <div key={item.topic}><b>{item.headline}</b><span>{item.detail}</span></div>)}</div>}</div></section>
     <section className="habit-grid">
       <article className="paper-card habit-card"><span className="eyebrow">SLY’S LIST</span><h2>One honest list.</h2><p className="sly-aside">“Write what you actually mean to do. I would rather hold you to one true thing than five hopeful ones.”</p><div className="habit-add"><input value={newHabit} onChange={e => setNewHabit(e.target.value)} placeholder="e.g. phone-free wind-down" aria-label="New habit"/><button className="mode-button" aria-pressed={mode === "build"} onClick={() => setMode(mode === "build" ? "reduce" : "build")}>{mode === "build" ? <Plus/> : <Minus/>}{mode === "build" ? "Build" : "Reduce"}</button><button className="icon-button" aria-label="Add habit" onClick={addHabit}><Plus/></button></div><div className="habit-list">{habits.length ? habits.map(h => <div className={"habit-row " + (h.done ? "done" : "")} key={h.id}><button aria-label={`Mark ${h.name} ${h.done ? "not done" : "done"}`} onClick={() => { const kept = !h.done; const next = habits.map(item => item.id === h.id ? markHabit(item, kept) : item); setHabits(next); persist({ habits: next }); setSlyReply(slyOnMark(next.find(item => item.id === h.id)!, kept)); }}><Check/></button><span className={h.mode}>{h.mode === "build" ? "BUILD" : "REDUCE"}</span><div className="habit-body"><p>{h.name}</p><span className="habit-record">{habitRun(h) > 0 ? <b>{habitRun(h)}-day run</b> : <b className="quiet">No run yet</b>}<i className="habit-week" aria-label={`Kept ${habitKeepRate(h)}% of the last seven days`}>{recentDays(7).map(day => <em key={day} className={h.log?.[day] ? "kept" : ""} />)}</i><small>{habitKeepRate(h)}% this week</small><i className="sly-said">{slyNote(h)}</i></span></div><button className="plain-icon" aria-label={`Delete ${h.name}`} onClick={() => { const next = habits.filter(item => item.id !== h.id); setHabits(next); persist({ habits: next }); }}><Trash2/></button></div>) : <p className="empty-note">Start with one habit worth protecting or one pattern you want to reduce—just for today.</p>}</div>{slyReply && <p className="sly-aside" role="status">“{slyReply}” — Sly</p>}</article>

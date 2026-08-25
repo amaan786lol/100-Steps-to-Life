@@ -77,6 +77,28 @@ export function readCommitments(storage: Pick<Storage, "getItem">, key = COMMITM
 export const isSetUp = (storage: Pick<Storage, "getItem">, key = COMMITMENTS_KEY) =>
   storage.getItem(key) !== null;
 
+export const SETUP_DISMISSED_KEY = "hundred-steps-setup-dismissed-v1";
+
+export type SetupStage =
+  /** Never seen it. Show the whole thing. */
+  | "fresh"
+  /** Skipped it. Offer it as a line, not a wall. */
+  | "dismissed"
+  /** Been through it. Only reachable from the settings icon. */
+  | "done";
+
+/**
+ * How much of the setup to show.
+ *
+ * Skipping must not mean forgotten, and it must not mean asked again the same
+ * way tomorrow. A first open earns the full screen; after that it is a line
+ * someone can take or leave.
+ */
+export function setupStage(storage: Pick<Storage, "getItem">): SetupStage {
+  if (isSetUp(storage)) return "done";
+  return storage.getItem(SETUP_DISMISSED_KEY) === null ? "fresh" : "dismissed";
+}
+
 /** Whether a commitment applies on a given date. */
 export const appliesOn = (commitment: Commitment, date: Date) =>
   commitment.days.length === 0 || commitment.days.includes(date.getDay());

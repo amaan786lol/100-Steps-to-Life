@@ -8,8 +8,10 @@ import {
   defaultCommitments,
   describeCommitment,
   firstFreeHour,
+  SETUP_DISMISSED_KEY,
   isSetUp,
   readCommitments,
+  setupStage,
   type Commitment,
 } from "./commitments";
 
@@ -127,5 +129,27 @@ describe("finding room in the day", () => {
 describe("saying it back", () => {
   it("describes a commitment the way the plan mentions it", () => {
     expect(describeCommitment(madressa)).toBe("Madressa, 08:00–11:00");
+  });
+});
+
+describe("how much of the setup to show", () => {
+  const keyed = (values: Record<string, string>) => ({ getItem: (key: string) => values[key] ?? null });
+
+  it("shows the whole thing on a first open", () => {
+    expect(setupStage(keyed({}))).toBe("fresh");
+  });
+
+  it("drops to a line once it has been skipped", () => {
+    // Skipping must not mean asked the same way again tomorrow.
+    expect(setupStage(keyed({ [SETUP_DISMISSED_KEY]: "2026-03-10" }))).toBe("dismissed");
+  });
+
+  it("stops offering it once it is done, even with nothing booked", () => {
+    // Someone who answered "nothing" has answered.
+    expect(setupStage(keyed({ [COMMITMENTS_KEY]: "[]" }))).toBe("done");
+  });
+
+  it("counts being set up above having skipped", () => {
+    expect(setupStage(keyed({ [COMMITMENTS_KEY]: "[]", [SETUP_DISMISSED_KEY]: "2026-03-10" }))).toBe("done");
   });
 });
