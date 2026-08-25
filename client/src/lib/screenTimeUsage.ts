@@ -18,11 +18,31 @@ export type UsageInterval = { start: number; end: number };
 export type DailyScreenTime = {
   /** Local calendar day, YYYY-MM-DD. */
   date: string;
-  /** Whole minutes of active use on that day. */
+  /** Whole minutes the device measured. Never edited. */
   minutes: number;
   /** When this figure was last recalculated. */
   measuredAt: string;
+  /**
+   * Minutes the learner said were not really use — a video left playing, a
+   * screen that stayed on in a pocket. Held separately from `minutes` rather
+   * than subtracted from it, so the measurement stays what the device said and
+   * the correction stays visible and reversible.
+   */
+  discounted?: number;
+  /** Why, in their own words. */
+  note?: string;
 };
+
+/**
+ * The figure to plan from: measured, less anything disowned.
+ *
+ * A phone cannot tell watching from not-watching. It knows the screen was on
+ * and which app was in front, and a video playing to an empty room looks
+ * exactly like one being watched. The learner is the only one who knows, so
+ * they are allowed to say — and the raw reading is kept either way.
+ */
+export const effectiveMinutes = (day: DailyScreenTime) =>
+  Math.max(0, day.minutes - Math.max(0, day.discounted ?? 0));
 
 export const localDayKey = (date = new Date()) => date.toLocaleDateString("en-CA");
 
@@ -125,13 +145,38 @@ export function recordDay(history: DailyScreenTime[], entry: DailyScreenTime, ke
 
 export const findDay = (history: DailyScreenTime[], date: string) => history.find((item) => item.date === date);
 
+/**
+ * Record that some of a day was not really use.
+ *
+ * Capped at what was measured: disowning more than the device saw would make
+ * the day negative, which is not a thing that can have happened. Passing 0
+ * clears the correction, so it can always be taken back.
+ */
+export function discountDay(
+  history: DailyScreenTime[],
+  date: string,
+  minutes: number,
+  note?: string,
+): DailyScreenTime[] {
+  return history.map((day) => {
+    if (day.date !== date) return day;
+    const discounted = Math.min(Math.max(0, Math.round(minutes)), day.minutes);
+    if (discounted === 0) {
+      const { discounted: _dropped, note: _droppedNote, ...rest } = day;
+      return rest;
+    }
+    return { ...day, discounted, note: note?.trim() || undefined };
+  });
+}
+
 /** The last `count` days, oldest first, with gaps left as null. */
 export function recentHistory(history: DailyScreenTime[], count = 7, from = new Date()) {
   return Array.from({ length: count }, (_, index) => {
     const date = new Date(from);
     date.setDate(date.getDate() - (count - 1 - index));
     const key = localDayKey(date);
-    return { date: key, minutes: findDay(history, key)?.minutes ?? null };
+    const day = findDay(history, key);
+    return { date: key, minutes: day ? effectiveMinutes(day) : null };
   });
 }
 

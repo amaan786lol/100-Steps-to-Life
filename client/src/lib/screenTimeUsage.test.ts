@@ -7,6 +7,8 @@ import {
   findDay,
   formatDuration,
   dayWindow,
+  discountDay,
+  effectiveMinutes,
   localDayKey,
   mergeIntervals,
   readHistory,
@@ -203,5 +205,65 @@ describe("the screen-time goal", () => {
   it("describes itself the way the interface shows it", () => {
     expect(describeGoal(under3h)).toBe("< 3h 00m");
     expect(describeGoal({ target: 45, direction: "above", daily: true })).toBe("≥ 45m");
+  });
+});
+
+describe("disowning time that was not really use", () => {
+  const entry = (date: string, minutes: number) => ({ date, minutes, measuredAt: `${date}T12:00:00.000Z` });
+
+  it("plans from the measurement when nothing is disowned", () => {
+    expect(effectiveMinutes(entry("2026-03-10", 360))).toBe(360);
+  });
+
+  it("subtracts what the learner said was not them", () => {
+    // A video left playing looks exactly like one being watched. Only the
+    // person holding the phone knows, so they are allowed to say.
+    const day = { ...entry("2026-03-10", 360), discounted: 150, note: "Left playing" };
+    expect(effectiveMinutes(day)).toBe(210);
+  });
+
+  it("keeps the raw measurement untouched, so the correction is reversible", () => {
+    const history = discountDay([entry("2026-03-10", 360)], "2026-03-10", 150, "Left playing");
+    expect(history[0].minutes).toBe(360);
+    expect(history[0].discounted).toBe(150);
+    expect(history[0].note).toBe("Left playing");
+  });
+
+  it("cannot disown more than the device saw", () => {
+    // A negative day is not a thing that can have happened.
+    const history = discountDay([entry("2026-03-10", 120)], "2026-03-10", 600);
+    expect(history[0].discounted).toBe(120);
+    expect(effectiveMinutes(history[0])).toBe(0);
+  });
+
+  it("takes the correction back when set to zero", () => {
+    const once = discountDay([entry("2026-03-10", 360)], "2026-03-10", 150, "Left playing");
+    const undone = discountDay(once, "2026-03-10", 0);
+    expect(undone[0].discounted).toBeUndefined();
+    expect(undone[0].note).toBeUndefined();
+    expect(effectiveMinutes(undone[0])).toBe(360);
+  });
+
+  it("ignores a negative correction rather than adding time", () => {
+    const history = discountDay([entry("2026-03-10", 360)], "2026-03-10", -90);
+    expect(effectiveMinutes(history[0])).toBe(360);
+  });
+
+  it("touches only the day named", () => {
+    const history = discountDay([entry("2026-03-09", 200), entry("2026-03-10", 360)], "2026-03-10", 60);
+    expect(history[0].discounted).toBeUndefined();
+    expect(history[1].discounted).toBe(60);
+  });
+
+  it("does nothing for a day that was never recorded", () => {
+    const history = discountDay([entry("2026-03-10", 360)], "2026-03-01", 60);
+    expect(history).toHaveLength(1);
+    expect(history[0].discounted).toBeUndefined();
+  });
+
+  it("reports the corrected figure in the week, not the raw one", () => {
+    const history = discountDay([entry("2026-03-10", 360)], "2026-03-10", 150);
+    const week = recentHistory(history, 1, new Date(2026, 2, 10, 9, 0));
+    expect(week[0].minutes).toBe(210);
   });
 });
