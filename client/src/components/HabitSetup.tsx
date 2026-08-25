@@ -12,6 +12,7 @@ import {
   type Commitment,
 } from "@/lib/commitments";
 import { currentLocalDay, type StoredHabit } from "@/lib/dailyCheckin";
+import { SALAH_KEY, clock as salahClock, readSalahTimes, type SalahTime } from "@/lib/salah";
 
 const COURSE_KEY = "hundred-steps-to-life-v1";
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -20,6 +21,7 @@ export type SetupResult = {
   habits: StoredHabit[];
   commitments: Commitment[];
   courseDay: number;
+  salah: SalahTime[];
 };
 
 /**
@@ -56,6 +58,7 @@ export function HabitSetup({
   const [day, setDay] = useState(courseDay);
   const [habitName, setHabitName] = useState("");
   const [habitMode, setHabitMode] = useState<"build" | "reduce">("build");
+  const [salah, setSalah] = useState<SalahTime[]>(() => readSalahTimes(localStorage));
 
   const addHabit = () => {
     const name = habitName.trim();
@@ -78,7 +81,7 @@ export function HabitSetup({
     updateCommitment(index, { days });
   };
 
-  const save = () => onSave({ habits: draftHabits, commitments: draftCommitments, courseDay: day });
+  const save = () => onSave({ habits: draftHabits, commitments: draftCommitments, courseDay: day, salah });
 
   /* --- The three pieces, shared by both modes --------------------------- */
 
@@ -203,7 +206,35 @@ export function HabitSetup({
     </div>
   );
 
-  const steps = [habitsStep, commitmentsStep, dayStep];
+  const salahStep = (
+    <div className="setup-step">
+      <h3>Your salah times</h3>
+      <p>
+        Sly builds the day around these rather than beside them. These are rough starting times — real ones depend on
+        where you are and which calculation you follow, so correct them here and they will stay corrected.
+      </p>
+      <ul className="setup-list salah-list">
+        {salah.map((prayer, index) => (
+          <li key={prayer.name}>
+            <strong>{prayer.name}</strong>
+            <input
+              type="time"
+              value={salahClock(prayer.at)}
+              aria-label={`${prayer.name} time`}
+              onChange={(e) => {
+                const [hours, minutes] = e.target.value.split(":").map(Number);
+                if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return;
+                setSalah(salah.map((item, i) => (i === index ? { ...item, at: hours * 60 + minutes } : item)));
+              }}
+            />
+          </li>
+        ))}
+      </ul>
+      <small>Sly never claims to know whether you prayed. He only knows when to leave you alone.</small>
+    </div>
+  );
+
+  const steps = [habitsStep, salahStep, commitmentsStep, dayStep];
 
   if (mode === "all") {
     return (
@@ -265,6 +296,7 @@ function clampHour(raw: string, fallback: number) {
 /** Persist what setup produced. */
 export function saveSetup(result: SetupResult, habitsKey: string) {
   try {
+    localStorage.setItem(SALAH_KEY, JSON.stringify(result.salah));
     localStorage.setItem(COMMITMENTS_KEY, JSON.stringify(result.commitments.filter((c) => c.name.trim() && c.toHour > c.fromHour)));
     const existing = JSON.parse(localStorage.getItem(habitsKey) ?? "{}") as Record<string, unknown>;
     localStorage.setItem(habitsKey, JSON.stringify({ ...existing, date: currentLocalDay(), habits: result.habits }));

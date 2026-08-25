@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import type { Commitment } from "./commitments";
-import type { Commitment } from "./commitments";
 import { defaultGoal } from "./screenTimeUsage";
 import { slySchedule, type SlyPlan } from "./slySchedule";
 import {

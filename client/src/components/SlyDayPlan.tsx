@@ -6,6 +6,8 @@ import { dayKeyOffset, loadDailyCheckin, type StoredHabit } from "@/lib/dailyChe
 import { getLesson } from "@/data/course";
 import { defaultGoal, findDay, readHistory, type ScreenTimeGoal } from "@/lib/screenTimeUsage";
 import { slySchedule } from "@/lib/slySchedule";
+import { readCommitments } from "@/lib/commitments";
+import { readSalahTimes } from "@/lib/salah";
 
 const HABITS_KEY = "hundred-steps-habit-studio-v1";
 const COURSE_KEY = "hundred-steps-to-life-v1";
@@ -53,6 +55,8 @@ export function SlyDayPlan({ revision = 0 }: { revision?: number }) {
     return slySchedule({
       lesson: loadLesson(),
       habits: loadHabits(),
+      commitments: readCommitments(localStorage),
+      salah: readSalahTimes(localStorage),
       // undefined means the day was never recorded — the same "not known" the
       // panel shows as a gap, not a zero.
       yesterdayMinutes: yesterday?.minutes ?? null,

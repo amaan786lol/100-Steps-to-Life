@@ -1223,3 +1223,11 @@ textarea:focus { border-color: var(--moss); box-shadow: 0 0 0 3px rgba(53, 106, 
 .sly-plan-notes p { margin: 0; color: var(--ink-soft); font-size: 12px; line-height: 1.5; }
 .sly-plan-notes b { color: var(--ink); }
 .sly-plan > small { display: block; margin-top: 12px; color: var(--muted); font-size: 10.5px; line-height: 1.45; }
+
+/* Salah blocks are the day's fixed points, so they read differently from work. */
+.sly-plan-blocks .block-salah span { color: var(--moss-dark); font-weight: 800; }
+.sly-plan-blocks .block-salah strong { color: var(--moss-dark); font-family: "Fraunces", Georgia, serif; font-size: 15px; font-weight: 600; }
+.sly-plan-blocks .block-salah { padding: 7px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.setup-list.salah-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.setup-list.salah-list strong { color: var(--ink); font: 600 15px "Fraunces", Georgia, serif; }
+.setup-list.salah-list input { padding: 7px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); color: var(--ink); font-size: 14px; font-weight: 700; }
