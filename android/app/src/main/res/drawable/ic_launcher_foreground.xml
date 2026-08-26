@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A rising set of steps, drawn inside the 72dp adaptive-icon safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FDF7EA"
+        android:pathData="M30,72h12v8h-12z M46,62h12v18h-12z M62,50h12v30h-12z" />
+    <path
+        android:fillColor="#E4C783"
+        android:pathData="M68,30l4,10l10,1l-7,7l2,10l-9,-5l-9,5l2,-10l-7,-7l10,-1z" />
+</vector>

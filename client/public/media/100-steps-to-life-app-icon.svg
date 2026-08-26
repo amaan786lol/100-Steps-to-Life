@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-labelledby="title description">
+  <title id="title">100 Steps to Life app icon</title>
+  <desc id="description">A deep blue and teal ascending path of geometric steps leading to a small golden guiding star.</desc>
+  <path fill="#102B3A" d="M19 164h31v-31h31v-31h31V71h31V40h31v124H19z"/>
+  <path fill="#0B6B69" d="M50 164h31v-31h31v-31h31V71h31v93H50z"/>
+  <path fill="#F7F1E2" d="M62 150h17v-17h17v-17h17V99h17V82h17V65h17v17h-17v17h-17v17h-17v17H96v17H79v17H62z"/>
+  <path fill="#D6A64B" d="m158 16 6.6 14.4L179 37l-14.4 6.6L158 58l-6.6-14.4L137 37l14.4-6.6z"/>
+  <circle cx="158" cy="37" r="4.4" fill="#FFF9E8"/>
+</svg>

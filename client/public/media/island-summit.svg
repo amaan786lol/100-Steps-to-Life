@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+<defs>
+  <linearGradient id="pap" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#f7eeda"/><stop offset="60%" stop-color="#f1e5cb"/><stop offset="100%" stop-color="#e7d9ba"/></linearGradient>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#8fa8bd" stop-opacity=".34"/><stop offset="62%" stop-color="#e2d3a6" stop-opacity=".13"/>
+    <stop offset="100%" stop-color="#e2b877" stop-opacity=".20"/></linearGradient>
+  <linearGradient id="ga" x1="0.1" y1="0" x2="0.9" y2="1">
+    <stop offset="0%" stop-color="#b6b49a"/><stop offset="100%" stop-color="#6b6a56"/></linearGradient>
+  <linearGradient id="gb" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#f3e8cf"/><stop offset="58%" stop-color="#e8dbbc"/><stop offset="100%" stop-color="#c9b691"/></linearGradient>
+  <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+    <stop offset="0%" stop-color="#f4d489" stop-opacity=".85"/><stop offset="100%" stop-color="#f4d489" stop-opacity="0"/></radialGradient>
+  <pattern id="hx" width="5" height="5" patternTransform="rotate(38)" patternUnits="userSpaceOnUse">
+    <line x1="0" y1="0" x2="0" y2="5" stroke="#2f3d2a" stroke-width="1" opacity=".40"/></pattern>
+  <pattern id="hx2" width="3.2" height="3.2" patternTransform="rotate(-40)" patternUnits="userSpaceOnUse">
+    <line x1="0" y1="0" x2="0" y2="3.2" stroke="#2f3d2a" stroke-width="1" opacity=".48"/></pattern>
+  <pattern id="hf" width="8" height="8" patternTransform="rotate(15)" patternUnits="userSpaceOnUse">
+    <line x1="0" y1="0" x2="0" y2="8" stroke="#2f3d2a" stroke-width=".8" opacity=".20"/></pattern>
+  <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="4"/>
+    <feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0.13"/></feComponentTransfer></filter>
+  <filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="2.2" xChannelSelector="R" yChannelSelector="G"/></filter>
+</defs>
+<rect width="800" height="500" fill="url(#pap)"/>
+<rect width="800" height="500" fill="url(#sky)"/>
+<g stroke="#2f3d2a" stroke-width=".9" opacity=".14" fill="none">
+  <path d="M-10 84q200-24 400 0t420 0M-10 116q200-22 400 0t420 0M-10 148q200-20 400 0t422 0"/></g>
+<g filter="url(#rough)">
+
+  <path d="M0 292l136-116 104 92 126-116 136 128 148-96 150 130v70H0z" fill="#ccd4d6" stroke="#2f3d2a" stroke-width="1.8" opacity=".4"/>
+  <path d="M0 344l122-98 108 84 128-96 132 106 160-78 150 106v56H0z" fill="#bfc9ca" stroke="#2f3d2a" stroke-width="1.8" opacity=".36"/>
+  <clipPath id="midclip"><path d="M0 452l166-160 132 116 140-158 164 190 198-118v130z"/></clipPath>
+  <clipPath id="peakclip"><path d="M0 452l204-262 122 136 148-214 156 236 170-116v220z"/></clipPath>
+  <path d="M0 452l166-160 132 116 140-158 164 190 198-118v130z" fill="#ebe0c4" stroke="#2f3d2a" stroke-width="2.6" /><path d="M0 452l166-160 132 116 140-158 164 190 198-118v130z" fill="url(#hf)" stroke="none" opacity=".4"/>
+  <g clip-path="url(#midclip)"><path d="M-10 300q80-22 160-8t150 4q80 4 150-18t180 2V-10H-10z" fill="#f4eddb" opacity=".9"/></g>
+  <path d="M0 452l166-160 132 116 140-158 164 190 198-118v130z" fill="none" stroke="#2f3d2a" stroke-width="2.6" />
+  <path d="M0 452l204-262 122 136 148-214 156 236 170-116v220z" fill="url(#gb)" stroke="#2f3d2a" stroke-width="3.2" /><path d="M0 452l204-262 122 136 148-214 156 236 170-116v220z" fill="url(#hx2)" stroke="none" opacity=".44"/>
+
+  <!-- Snow clipped to the ridge itself, so it lies on the peaks not near them. -->
+  <g clip-path="url(#peakclip)">
+    <path d="M-10 282q76-34 152-16t142 10q86 4 156-40t190 8V-10H-10z" fill="#f7f1de" opacity=".95"/>
+    <path d="M-10 282q76-34 152-16t142 10q86 4 156-40t190 8" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".4"/>
+  </g>
+  <path d="M0 452l204-262 122 136 148-214 156 236 170-116v220z" fill="none" stroke="#2f3d2a" stroke-width="3.2" />
+
+  <!-- Facets, so each peak has a lit and a shadow side. -->
+  <path d="M204 190l122 136-96 126z" fill="url(#hx)" stroke="none" opacity=".34"/><path d="M474 112l156 236-118 42z" fill="url(#hx)" stroke="none" opacity=".34"/><path d="M800 232l-170 116 170 0z" fill="url(#hx)" stroke="none" opacity=".34"/>
+  <path d="M204 200l52 76M232 250l-56 78M474 150l58 90M502 262l-46 86M630 396l58 46" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".5" stroke-linecap="round"/>
+
+  <!-- Mist caught in the valleys, so the peaks read as standing above it. -->
+  <path d="M110 400q46-11 96-5t84 8q-36 11-96 9t-84-12z" fill="#f4ecd9" stroke="none" opacity=".5"/><path d="M566 388q40-10 84-5t78 8q-32 10-86 8t-76-11z" fill="#f4ecd9" stroke="none" opacity=".5"/>
+
+  <!-- The route up, marked with the steps that cut across it. -->
+  <path d="M60 452q170-46 288-140t126-140" fill="none" stroke="#2f3d2a" stroke-width="3" opacity=".62" stroke-linecap="round"/>
+  <path d="M112 442v-14M186 420v-14M256 392v-16M312 350v-16M356 306v-16M400 258v-16M436 210v-16" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".45" stroke-linecap="round"/>
+  <g><path d="M446 174h58v-18h-58zM452 156h46v-16h-46zM458 140h34v-16h-34zM466 124h18v-16h-18z" fill="#dfd0ab" stroke="#2f3d2a" stroke-width="2.6" />
+     <path d="M475 108v-24" fill="none" stroke="#2f3d2a" stroke-width="2.6" opacity=".75" stroke-linecap="round"/><path d="M475 84l34 12-34 12z" fill="#e2b877" stroke="#2f3d2a" stroke-width="2.4" /></g>
+
+  <!-- The rock you are standing on: a near ledge, dark, that frames the view. -->
+  <path d="M-10 500v-58q120-22 214-6t186 12 200-16 220 10v58z" fill="#d8caa6" stroke="#2f3d2a" stroke-width="3" /><path d="M-10 500v-58q120-22 214-6t186 12 200-16 220 10v58z" fill="url(#hx)" stroke="none" opacity=".34"/><path d="M-10 500v-58q120-22 214-6t186 12 200-16 220 10v58z" fill="none" stroke="#2f3d2a" stroke-width="3" />
+  <path d="M-10 466q118-20 214-4t186 12 200-16 220 10M40 486q160-14 300-4t260-8 210 6" fill="none" stroke="#2f3d2a" stroke-width="2.2" opacity=".4" stroke-linecap="round"/>
+  <path d="M120 442v22M268 448v20M430 452v18M596 442v24M700 448v18" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".35" stroke-linecap="round"/>
+
+  <!-- A boundary stone and wind-bent pines on the last rise. -->
+  <path d="M660 442v-52q18-9 36 0v52z" fill="#cbb894" stroke="#2f3d2a" stroke-width="2.8" /><path d="M660 442v-52q18-9 36 0v52z" fill="url(#hx2)" stroke="none" opacity=".32"/>
+  <path d="M666 414h24M666 428h24" fill="none" stroke="#2f3d2a" stroke-width="1.8" opacity=".5" stroke-linecap="round"/>
+  <path d="M108 446h8v-16h-8z" fill="#8a6f4c" stroke="#2f3d2a" stroke-width="2" /><path d="M85 440Q112 434 139 440L112 395z" fill="#5c7a4f" stroke="#2f3d2a" stroke-width="2.2" /><path d="M91 413Q112 407 133 413L112 368z" fill="#5c7a4f" stroke="#2f3d2a" stroke-width="2.2" /><path d="M97 387Q112 381 127 387L112 342z" fill="#5c7a4f" stroke="#2f3d2a" stroke-width="2.2" /><path d="M103 360Q112 354 121 360L112 315z" fill="#5c7a4f" stroke="#2f3d2a" stroke-width="2.2" /><path d="M112 439.6L139 439.6L112 324z" fill="url(#hx2)" stroke="none" opacity=".3"/>
+  <path d="M152 452h8v-16h-8z" fill="#8a6f4c" stroke="#2f3d2a" stroke-width="2" /><path d="M137 446Q156 440 175 446L156 418z" fill="#6d8f60" stroke="#2f3d2a" stroke-width="2.2" /><path d="M141 429Q156 423 171 429L156 401z" fill="#6d8f60" stroke="#2f3d2a" stroke-width="2.2" /><path d="M145 413Q156 407 167 413L156 385z" fill="#6d8f60" stroke="#2f3d2a" stroke-width="2.2" /><path d="M150 396Q156 390 162 396L156 368z" fill="#6d8f60" stroke="#2f3d2a" stroke-width="2.2" /><path d="M156 445.6L175 445.6L156 370z" fill="url(#hx2)" stroke="none" opacity=".3"/>
+  <path d="M226 476q2-18 18-16q20-4 30 16z" fill="#c9ba96" stroke="#2f3d2a" stroke-width="2.4" /><path d="M226 476q2-18 18-16q20-4 30 16z" fill="url(#hx2)" stroke="none" opacity=".38"/><path d="M288 490q2-13 14-12q15-3 22 12z" fill="#c9ba96" stroke="#2f3d2a" stroke-width="2.4" /><path d="M288 490q2-13 14-12q15-3 22 12z" fill="url(#hx2)" stroke="none" opacity=".38"/><path d="M535 480q2-15 16-14q18-4 26 14z" fill="#c9ba96" stroke="#2f3d2a" stroke-width="2.4" /><path d="M535 480q2-15 16-14q18-4 26 14z" fill="url(#hx2)" stroke="none" opacity=".38"/><path d="M745 486q2-14 14-13q16-3 24 13z" fill="#c9ba96" stroke="#2f3d2a" stroke-width="2.4" /><path d="M745 486q2-14 14-13q16-3 24 13z" fill="url(#hx2)" stroke="none" opacity=".38"/>
+  <path d="M52 480q-2-17 -11-22M52 480q0-19 2-26M52 480q3-16 12-20" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".8" stroke-linecap="round"/><path d="M196 488q-2-14 -9-18M196 488q0-16 2-22M196 488q3-13 10-17" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".8" stroke-linecap="round"/><path d="M352 484q-2-13 -8-16M352 484q0-14 2-20M352 484q3-12 9-15" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".8" stroke-linecap="round"/><path d="M484 490q-2-14 -9-18M484 490q0-16 2-22M484 490q3-13 10-17" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".8" stroke-linecap="round"/><path d="M626 486q-2-13 -9-17M626 486q0-15 2-21M626 486q3-12 10-16" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".8" stroke-linecap="round"/><path d="M720 480q-2-15 -10-20M720 480q0-18 2-24M720 480q3-14 11-19" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".8" stroke-linecap="round"/>
+  <path d="M539 108q4-5 9 0q4-5 9 0" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".5" stroke-linecap="round"/><path d="M583 86q4-5 9 0q4-5 9 0" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".5" stroke-linecap="round"/><path d="M625 118q4-5 9 0q4-5 9 0" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".5" stroke-linecap="round"/>
+</g>
+<rect width="800" height="500" filter="url(#grain)" opacity=".75"/>
+</svg>

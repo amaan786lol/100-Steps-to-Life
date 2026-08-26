@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+<defs>
+  <linearGradient id="pap" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#f7eeda"/><stop offset="60%" stop-color="#f1e5cb"/><stop offset="100%" stop-color="#e7d9ba"/></linearGradient>
+  <linearGradient id="skywash" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#7d9a74" stop-opacity=".30"/><stop offset="70%" stop-color="#c2c98f" stop-opacity=".10"/>
+    <stop offset="100%" stop-color="#e2b877" stop-opacity=".18"/></linearGradient>
+  <linearGradient id="stone" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#f3e8cf"/><stop offset="55%" stop-color="#e8dbbc"/><stop offset="100%" stop-color="#c9b691"/></linearGradient>
+  <linearGradient id="domew" x1="0.15" y1="0" x2="0.95" y2="0.9">
+    <stop offset="0%" stop-color="#8fae7c"/><stop offset="45%" stop-color="#6d8f60"/><stop offset="100%" stop-color="#3f5a3a"/></linearGradient>
+  <pattern id="hx" width="5" height="5" patternTransform="rotate(38)" patternUnits="userSpaceOnUse">
+    <line x1="0" y1="0" x2="0" y2="5" stroke="#2f3d2a" stroke-width="1" opacity=".42"/></pattern>
+  <pattern id="hx2" width="3.2" height="3.2" patternTransform="rotate(-40)" patternUnits="userSpaceOnUse">
+    <line x1="0" y1="0" x2="0" y2="3.2" stroke="#2f3d2a" stroke-width="1" opacity=".5"/></pattern>
+  <pattern id="hxfine" width="8" height="8" patternTransform="rotate(15)" patternUnits="userSpaceOnUse">
+    <line x1="0" y1="0" x2="0" y2="8" stroke="#2f3d2a" stroke-width=".8" opacity=".22"/></pattern>
+  <filter id="pap2"><feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="4"/>
+    <feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0.13"/></feComponentTransfer></filter>
+  <clipPath id="domeclip"><path d="M328 288c0-84 33-130 72-130s72 46 72 130z"/></clipPath>
+  <filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4" xChannelSelector="R" yChannelSelector="G"/></filter>
+</defs>
+
+<rect width="800" height="500" fill="url(#pap)"/>
+<rect width="800" height="500" fill="url(#skywash)"/>
+<g stroke="#2f3d2a" stroke-width=".9" opacity=".16" fill="none">
+  <path d="M-10 96q200-26 400 0t420 0M-10 130q200-24 400 0t420 0M-10 164q200-22 400 0t420 0"/></g>
+
+<g filter="url(#rough)">
+  <!-- Cypresses, behind the building. -->
+  <g fill="#5c7a4f" opacity=".9" stroke="#2f3d2a" stroke-width="2.4">
+    <path d="M108 452c-22 0-30-26-30-70 0-52 16-96 30-96s30 44 30 96c0 44-8 70-30 70z"/>
+    <path d="M700 452c-19 0-26-22-26-60 0-45 14-83 26-83s26 38 26 83c0 38-7 60-26 60z"/></g>
+  <g fill="url(#hx2)" opacity=".55">
+    <path d="M108 452c-22 0-30-26-30-70 0-52 16-96 30-96s30 44 30 96c0 44-8 70-30 70z"/>
+    <path d="M700 452c-19 0-26-22-26-60 0-45 14-83 26-83s26 38 26 83c0 38-7 60-26 60z"/></g>
+  <g stroke="#2f3d2a" stroke-width="3" stroke-linecap="round"><path d="M108 452v26M700 452v26"/></g>
+
+  <!-- Minarets, with balconies. -->
+  <g stroke="#2f3d2a" stroke-width="3.2">
+    <path d="M182 452V214h40v238z" fill="url(#stone)"/><path d="M182 452V214h40v238z" fill="url(#hxfine)" stroke="none"/>
+    <path d="M182 452V214h40v238z" fill="none"/>
+    <path d="M172 300h60M172 306h60" stroke-width="2.6"/>
+    <path d="M176 214h52" stroke-width="3"/>
+    <path d="M202 214c-13 0-14-24 0-42 14 18 13 42 0 42z" fill="#8fae7c"/>
+    <path d="M202 172v-14" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M578 452V214h40v238z" fill="url(#stone)"/><path d="M578 452V214h40v238z" fill="url(#hx2)" stroke="none" opacity=".5"/>
+    <path d="M578 452V214h40v238z" fill="none"/>
+    <path d="M568 300h60M568 306h60" stroke-width="2.6"/>
+    <path d="M572 214h52" stroke-width="3"/>
+    <path d="M598 214c-13 0-14-24 0-42 14 18 13 42 0 42z" fill="#8fae7c"/>
+    <path d="M598 172v-14" stroke-width="2.6" stroke-linecap="round"/>
+  </g>
+
+  <!-- Arcade wings. -->
+  <g stroke="#2f3d2a" stroke-width="3">
+    <path d="M232 452V336h96v116z" fill="url(#stone)"/>
+    <path d="M472 452V336h96v116z" fill="url(#stone)"/>
+    <path d="M472 452V336h96v116z" fill="url(#hx2)" stroke="none" opacity=".55"/>
+    <path d="M232 452V336h96v116zM472 452V336h96v116z" fill="none"/>
+    <g fill="#e7d9ba">
+      <path d="M250 452v-52a20 20 0 0 1 40 0v52z"/><path d="M300 452v-52a20 20 0 0 1 40 0v52z" opacity="0"/>
+      <path d="M492 452v-52a20 20 0 0 1 40 0v52z"/></g>
+    <path d="M250 452v-52a20 20 0 0 1 40 0v52zM492 452v-52a20 20 0 0 1 40 0v52z" fill="none"/>
+  </g>
+
+  <!-- The drum, with arched windows. -->
+  <g stroke="#2f3d2a" stroke-width="3.2">
+    <path d="M328 336h144v-48H328z" fill="url(#stone)"/>
+    <path d="M328 336h144v-48H328z" fill="url(#hxfine)" stroke="none"/>
+    <path d="M328 336h144v-48H328z" fill="none"/>
+    <g fill="#e2b877" stroke-width="2.4">
+      <path d="M352 330v-20a8 8 0 0 1 16 0v20zM392 330v-20a8 8 0 0 1 16 0v20zM432 330v-20a8 8 0 0 1 16 0v20z"/></g>
+  </g>
+
+  <!-- The dome, ribbed. -->
+  <path d="M328 288c0-84 33-130 72-130s72 46 72 130z" fill="url(#domew)" stroke="#2f3d2a" stroke-width="3.4"/>
+  <g stroke="#2c3f28" stroke-width="1.8" fill="none" opacity=".75" clip-path="url(#domeclip)">
+    <path d="M400 158v130M372 165c-14 30-18 78-18 123M428 165c14 30 18 78 18 123
+             M348 182c-12 26-16 66-16 106M452 182c12 26 16 66 16 106"/></g>
+  <path d="M400 158c39 0 72 46 72 130h-30c0-78-19-118-42-130z" fill="url(#hx)" opacity=".5" stroke="none"/>
+  <path d="M328 288h144" stroke="#2f3d2a" stroke-width="3.4"/>
+
+  <!-- Crescent finial. -->
+  <path d="M400 158v-30" stroke="#2f3d2a" stroke-width="3.4" stroke-linecap="round"/>
+  <path fill-rule="evenodd" fill="#e2b877" stroke="#2f3d2a" stroke-width="2.2"
+        d="M384 112a18 18 0 1 0 36 0 18 18 0 1 0-36 0Z
+           M394 112a14 14 0 1 0 28 0 14 14 0 1 0-28 0Z"/>
+
+  <!-- The iwan: recessed arch over the door. -->
+  <g stroke="#2f3d2a" stroke-width="3.2">
+    <path d="M336 452V300h128v152z" fill="url(#stone)"/>
+    <path d="M348 452V336a52 52 0 0 1 104 0v116z" fill="#efe3c8"/>
+    <path d="M348 452V336a52 52 0 0 1 104 0v116z" fill="url(#hxfine)" stroke="none"/>
+    <path d="M348 452V336a52 52 0 0 1 104 0v116z" fill="none"/>
+    <path d="M366 452v-96a34 34 0 0 1 68 0v96z" fill="#3f5a3a"/>
+    <path d="M366 452v-96a34 34 0 0 1 68 0v96z" fill="url(#hx2)" stroke="none" opacity=".45"/>
+    <path d="M366 452v-96a34 34 0 0 1 68 0v96z" fill="none"/>
+    <g stroke-width="2.2" fill="none" opacity=".8">
+      <path d="M352 330a48 48 0 0 1 96 0M358 322a42 42 0 0 1 84 0"/></g>
+  </g>
+
+  <!-- Hanging lamp in the arch. -->
+  <g stroke="#2f3d2a" stroke-width="2.2">
+    <path d="M400 356v14" stroke-linecap="round"/>
+    <path d="M400 370c9 0 15 8 15 16s-6 14-15 14-15-6-15-14 6-16 15-16z" fill="#e2b877"/></g>
+
+  <!-- Steps. -->
+  <g stroke="#2f3d2a" stroke-width="3">
+    <path d="M310 452h180v10H310zM296 462h208v10H296zM282 472h236v10H282z" fill="url(#stone)"/></g>
+  <path d="M60 482h680" stroke="#2f3d2a" stroke-width="2.4" opacity=".55"/>
+</g>
+
+<rect width="800" height="500" filter="url(#pap2)" opacity=".75"/>
+</svg>

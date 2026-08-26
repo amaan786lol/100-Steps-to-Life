@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+<defs>
+  <linearGradient id="pap" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#f7eeda"/><stop offset="60%" stop-color="#f1e5cb"/><stop offset="100%" stop-color="#e7d9ba"/></linearGradient>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#8b9c86" stop-opacity=".34"/><stop offset="62%" stop-color="#ddd2a4" stop-opacity=".13"/>
+    <stop offset="100%" stop-color="#e2b877" stop-opacity=".20"/></linearGradient>
+  <linearGradient id="ga" x1="0.1" y1="0" x2="0.9" y2="1">
+    <stop offset="0%" stop-color="#a8b894"/><stop offset="100%" stop-color="#5d6f52"/></linearGradient>
+  <linearGradient id="gb" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#f3e8cf"/><stop offset="58%" stop-color="#e8dbbc"/><stop offset="100%" stop-color="#c9b691"/></linearGradient>
+  <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+    <stop offset="0%" stop-color="#f4d489" stop-opacity=".85"/><stop offset="100%" stop-color="#f4d489" stop-opacity="0"/></radialGradient>
+  <pattern id="hx" width="5" height="5" patternTransform="rotate(38)" patternUnits="userSpaceOnUse">
+    <line x1="0" y1="0" x2="0" y2="5" stroke="#2f3d2a" stroke-width="1" opacity=".40"/></pattern>
+  <pattern id="hx2" width="3.2" height="3.2" patternTransform="rotate(-40)" patternUnits="userSpaceOnUse">
+    <line x1="0" y1="0" x2="0" y2="3.2" stroke="#2f3d2a" stroke-width="1" opacity=".48"/></pattern>
+  <pattern id="hf" width="8" height="8" patternTransform="rotate(15)" patternUnits="userSpaceOnUse">
+    <line x1="0" y1="0" x2="0" y2="8" stroke="#2f3d2a" stroke-width=".8" opacity=".20"/></pattern>
+  <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="4"/>
+    <feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0.13"/></feComponentTransfer></filter>
+  <filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="2.2" xChannelSelector="R" yChannelSelector="G"/></filter>
+</defs>
+<rect width="800" height="500" fill="url(#pap)"/>
+<rect width="800" height="500" fill="url(#sky)"/>
+<g stroke="#2f3d2a" stroke-width=".9" opacity=".14" fill="none">
+  <path d="M-10 84q200-24 400 0t420 0M-10 116q200-22 400 0t420 0M-10 148q200-20 400 0t422 0"/></g>
+<g filter="url(#rough)">
+
+  <path d="M0 306l128-70 104 56 122-66 130 62 148-44 168 66v52H0z" fill="#cad2c4" stroke="#2f3d2a" stroke-width="1.8" opacity=".42"/>
+  <path d="M0 346l140-56 112 44 130-52 140 54 278-48v66H0z" fill="#bcc7b5" stroke="#2f3d2a" stroke-width="1.8" opacity=".38"/>
+  <path d="M0 400q160-72 400-42t400-32V500H0z" fill="#e2dcb4" stroke="#2f3d2a" stroke-width="2.6" /><path d="M0 400q160-72 400-42t400-32V500H0z" fill="url(#hf)" stroke="none" opacity=".42"/>
+  <path d="M0 442q200-58 400-32t400-28M0 476q180-48 360-26t440-30M140 500q170-42 320-24" fill="none" stroke="#2f3d2a" stroke-width="2.2" opacity=".38" stroke-linecap="round"/>
+
+  <!-- The paths, arriving from every direction and meeting at the hall. -->
+  <path d="M0 490q180-56 300-104t100-86M800 484q-180-52-296-100t-104-90M400 500V300M180 500q120-72 220-116M640 500q-130-70-240-116" fill="none" stroke="#2f3d2a" stroke-width="2.6" opacity=".4" stroke-linecap="round"/>
+
+  <!-- The hall: columns, pediment, a standard over the door. -->
+  <g><path d="M292 400V262h216v138z" fill="#efe3c8" stroke="#2f3d2a" stroke-width="3" /><path d="M292 400V262h216v138z" fill="url(#hf)" stroke="none" opacity=".5"/><path d="M292 400V262h216v138z" fill="none" stroke="#2f3d2a" stroke-width="3" />
+     <path d="M276 262l124-72 124 72z" fill="#c9b691" stroke="#2f3d2a" stroke-width="3" />
+     <path d="M288 240h224M300 220h200" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".45" stroke-linecap="round"/>
+     <path d="M320 400V286" fill="none" stroke="#2f3d2a" stroke-width="3" opacity=".7" stroke-linecap="round"/><path d="M312 286h16M312 400h16" fill="none" stroke="#2f3d2a" stroke-width="2.2" opacity=".6" stroke-linecap="round"/><path d="M364 400V286" fill="none" stroke="#2f3d2a" stroke-width="3" opacity=".7" stroke-linecap="round"/><path d="M356 286h16M356 400h16" fill="none" stroke="#2f3d2a" stroke-width="2.2" opacity=".6" stroke-linecap="round"/><path d="M436 400V286" fill="none" stroke="#2f3d2a" stroke-width="3" opacity=".7" stroke-linecap="round"/><path d="M428 286h16M428 400h16" fill="none" stroke="#2f3d2a" stroke-width="2.2" opacity=".6" stroke-linecap="round"/><path d="M480 400V286" fill="none" stroke="#2f3d2a" stroke-width="3" opacity=".7" stroke-linecap="round"/><path d="M472 286h16M472 400h16" fill="none" stroke="#2f3d2a" stroke-width="2.2" opacity=".6" stroke-linecap="round"/>
+     <path d="M374 400v-72a26 26 0 0 1 52 0v72z" fill="#3f5a3a" stroke="#2f3d2a" stroke-width="2.6" />
+     <path d="M400 328v72" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".5" stroke-linecap="round"/>
+     <path d="M400 190v-30" fill="none" stroke="#2f3d2a" stroke-width="2.6" /><path d="M400 160l36 14-36 14z" fill="#e2b877" stroke="#2f3d2a" stroke-width="2.4" /></g>
+
+  <!-- The council ring: standing stones on an ellipse, near ones taller. -->
+  <path d="M210 452a190 44 0 0 1 380 0a190 44 0 0 1-380 0" fill="none" stroke="#2f3d2a" stroke-width="2.6" opacity=".45" stroke-linecap="round"/>
+  <path d="M240 452a160 34 0 0 1 320 0a160 34 0 0 1-320 0" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".22" stroke-linecap="round"/>
+  <path d="M205 440q2-30 11-36q11 6 10 30z" fill="#cbb894" stroke="#2f3d2a" stroke-width="2.6" /><path d="M205 440q2-30 11-36q11 6 10 30z" fill="url(#hx2)" stroke="none" opacity=".32"/><path d="M205 440q2-30 11-36q11 6 10 30z" fill="none" stroke="#2f3d2a" stroke-width="2.6" /><path d="M248 464q3-42 14-48q14 6 13 42z" fill="#cbb894" stroke="#2f3d2a" stroke-width="2.6" /><path d="M248 464q3-42 14-48q14 6 13 42z" fill="url(#hx2)" stroke="none" opacity=".32"/><path d="M248 464q3-42 14-48q14 6 13 42z" fill="none" stroke="#2f3d2a" stroke-width="2.6" /><path d="M322 482q3-50 16-56q16 6 15 50z" fill="#cbb894" stroke="#2f3d2a" stroke-width="2.6" /><path d="M322 482q3-50 16-56q16 6 15 50z" fill="url(#hx2)" stroke="none" opacity=".32"/><path d="M322 482q3-50 16-56q16 6 15 50z" fill="none" stroke="#2f3d2a" stroke-width="2.6" /><path d="M446 482q3-50 16-56q16 6 15 50z" fill="#cbb894" stroke="#2f3d2a" stroke-width="2.6" /><path d="M446 482q3-50 16-56q16 6 15 50z" fill="url(#hx2)" stroke="none" opacity=".32"/><path d="M446 482q3-50 16-56q16 6 15 50z" fill="none" stroke="#2f3d2a" stroke-width="2.6" /><path d="M524 464q3-42 14-48q14 6 13 42z" fill="#cbb894" stroke="#2f3d2a" stroke-width="2.6" /><path d="M524 464q3-42 14-48q14 6 13 42z" fill="url(#hx2)" stroke="none" opacity=".32"/><path d="M524 464q3-42 14-48q14 6 13 42z" fill="none" stroke="#2f3d2a" stroke-width="2.6" /><path d="M573 440q2-30 11-36q11 6 10 30z" fill="#cbb894" stroke="#2f3d2a" stroke-width="2.6" /><path d="M573 440q2-30 11-36q11 6 10 30z" fill="url(#hx2)" stroke="none" opacity=".32"/><path d="M573 440q2-30 11-36q11 6 10 30z" fill="none" stroke="#2f3d2a" stroke-width="2.6" /><path d="M277 424q2-24 9-30q9 6 9 24z" fill="#cbb894" stroke="#2f3d2a" stroke-width="2.6" /><path d="M277 424q2-24 9-30q9 6 9 24z" fill="url(#hx2)" stroke="none" opacity=".32"/><path d="M277 424q2-24 9-30q9 6 9 24z" fill="none" stroke="#2f3d2a" stroke-width="2.6" /><path d="M505 424q2-24 9-30q9 6 9 24z" fill="#cbb894" stroke="#2f3d2a" stroke-width="2.6" /><path d="M505 424q2-24 9-30q9 6 9 24z" fill="url(#hx2)" stroke="none" opacity=".32"/><path d="M505 424q2-24 9-30q9 6 9 24z" fill="none" stroke="#2f3d2a" stroke-width="2.6" />
+
+  <!-- The well, and the long table under a tree. -->
+  <g><path d="M132 428v-34h58v34z" fill="#d9c7a2" stroke="#2f3d2a" stroke-width="2.4" /><path d="M132 428v-34h58v34z" fill="url(#hx2)" stroke="none" opacity=".3"/><path d="M132 428v-34h58v34z" fill="none" stroke="#2f3d2a" stroke-width="2.4" />
+     <path d="M138 406h46" fill="none" stroke="#2f3d2a" stroke-width="1.8" opacity=".5" stroke-linecap="round"/>
+     <path d="M136 394v-30h50v30" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".7" stroke-linecap="round"/><path d="M126 364l35-20 35 20z" fill="#cbb08a" stroke="#2f3d2a" stroke-width="2.4" />
+     <path d="M161 364v22" fill="none" stroke="#2f3d2a" stroke-width="2.2" opacity=".7" stroke-linecap="round"/><path d="M152 386h18v14h-18z" fill="#c9a878" stroke="#2f3d2a" stroke-width="2.2" /></g>
+  <path d="M667 400h10v-40h-10z" fill="#8a6f4c" stroke="#2f3d2a" stroke-width="2.2" /><path d="M672 368l-12-16M672 362l14-18" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".7" stroke-linecap="round"/><path d="M614 327.4q-6-41 26-55q29-32 64-6q35-12 29 32q20 35-20 52q-52 29-104 0z" fill="#6d8f60" stroke="#2f3d2a" stroke-width="2.6" /><path d="M614 327.4q-6-41 26-55q29-32 64-6q35-12 29 32q20 35-20 52q-52 29-104 0z" fill="url(#hx2)" stroke="none" opacity=".34"/><path d="M614 327.4q-6-41 26-55q29-32 64-6q35-12 29 32q20 35-20 52q-52 29-104 0z" fill="none" stroke="#2f3d2a" stroke-width="2.6" />
+  <g><path d="M596 424h140v14H596z" fill="#cbb08a" stroke="#2f3d2a" stroke-width="2.4" /><path d="M610 438v22M722 438v22" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".8" stroke-linecap="round"/>
+     <path d="M588 448h52v10h-52zM692 448h52v10h-52z" fill="#c9a878" stroke="#2f3d2a" stroke-width="2.2" /></g>
+
+  <path d="M60 468q-2-14 -9-18M60 468q0-16 2-22M60 468q3-13 10-17" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".8" stroke-linecap="round"/><path d="M104 480q-2-13 -8-16M104 480q0-14 2-20M104 480q3-12 9-15" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".8" stroke-linecap="round"/><path d="M760 462q-2-14 -9-18M760 462q0-16 2-22M760 462q3-13 10-17" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".8" stroke-linecap="round"/><path d="M716 478q-2-13 -8-16M716 478q0-14 2-20M716 478q3-12 9-15" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".8" stroke-linecap="round"/><path d="M400 462q-2-11 -7-14M400 462q0-13 2-18M400 462q3-10 8-14" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".8" stroke-linecap="round"/>
+  <path d="M221 120q4-5 9 0q4-5 9 0" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".5" stroke-linecap="round"/><path d="M265 98q4-5 9 0q4-5 9 0" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".5" stroke-linecap="round"/><path d="M309 128q4-5 9 0q4-5 9 0" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".5" stroke-linecap="round"/>
+</g>
+<rect width="800" height="500" filter="url(#grain)" opacity=".75"/>
+</svg>

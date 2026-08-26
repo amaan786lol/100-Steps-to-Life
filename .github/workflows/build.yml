@@ -1,0 +1,85 @@
+name: Build
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  web:
+    name: Web tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm exec tsc --noEmit
+
+      - run: pnpm test
+
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The Android SDK is preinstalled on GitHub-hosted runners, so there is
+      # nothing to download here — only a JDK to pin, because the Android
+      # Gradle Plugin needs 17 and the runner's default has moved before.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # The APK bundles the built web app, so this has to happen first.
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # These are the interval-pairing rules — the part most likely to be
+      # quietly wrong. They run on the JVM, so no emulator is involved.
+      - name: Unit tests
+        run: ./gradlew --no-daemon testDebugUnitTest
+        working-directory: android
+
+      - name: Lint
+        run: ./gradlew --no-daemon lintDebug
+        working-directory: android
+
+      - name: Assemble debug APK
+        run: ./gradlew --no-daemon assembleDebug
+        working-directory: android
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hundred-steps-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      # Reports are what make a red build diagnosable without a local SDK.
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: android-reports
+          path: |
+            android/app/build/reports/
+            android/app/build/outputs/logs/
+          if-no-files-found: ignore

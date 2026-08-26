@@ -1,0 +1,36 @@
+# Groundwork — Implementation Checklist
+
+- [ ] Create and push the current project to the private GitHub repository 100-Steps-to-Life.
+- [ ] Prepare and deliver a clean source-code archive for manual GitHub upload.
+- [x] Identify and verify the export remote and `main` branch from the user-provided repository URL after the Codespaces workspace link proved inaccessible.
+- [ ] Redesign the supplied single-file HTML app’s visual layer only, preserving its required script, IDs, classes, storage keys, and path-node behaviour while adding a responsive desktop view.
+- [x] Clarify that Hundred Steps to Life is guided by the One Percent Philosophy while its modules also draw on other carefully bounded frameworks.
+- [x] Add a homepage explanation of how the course was designed, its rules and boundaries, the One Percent Philosophy, and how multiple philosophies inform the modules.
+- [x] Make “Start improving your life.” the bottom call to action that begins Day 1 of the course.
+- [x] Implement the professional course-explainer homepage in the existing app, including the Firstlight Cove entry point and account-optional local-saving message.
+- [x] Add authenticated backup and explicit restoration for the local journal without making sign-in a barrier.
+- [x] Add installable offline support for the course shell and local-first journal.
+- [x] Make the bottom clickable CTA itself read exactly “Start improving your life.” and ensure it launches Day 1.
+- [x] Add standard 192px and 512px application icons and complete manifest installability requirements.
+- [x] Ensure the application shell is cached for dependable offline reopening after an initial online visit.
+- [x] Re-verify the installed/offline course experience before the next project version.
+- [ ] Confirm a real browser offline reopen on a device or through DevTools before public release.
+- [x] Define all ten island environments, each with a learning theme, emotional tone, landmark, repeated memory cue, and shared route/node system.
+- [x] Define meaningful lesson waypoints that signal learning and application without relying on generic game-like circles.
+- [x] Create separate cohesive visual assets for the ten island regions and final connected-world state.
+- [x] Redesign the primary experience around the island journey map, including region transitions and the final assessment quest.
+- [x] Create the connected-world completion state and Final Test quest that reviews judgment and application across the course.
+- [x] Add persistent Morning, Night, and Green appearance modes with a clear, accessible theme selector.
+- [x] Create a professional full wordmark and standalone app icon for 100 Steps to Life using the approved ascending-path concept.
+- [x] Confirm the final product name: Hundred Steps to Life.
+- [x] Establish Islam as the respectful foundation of the course while keeping the curriculum meaningfully connected to everyday life, learning, health, relationships, skills, and work.
+- [x] Verify the author, exact wording, and original context of the principle about doing what must be done when it should be done.
+- [x] Add the verified self-discipline principle to the project philosophy and daily-lesson guidance.
+- [x] Produce a coherent 100-day curriculum in ten connected phases, with verified sourcing required for all Islamic and Stoic quotations.
+- [x] Define the local-first course data model, including lessons, quizzes, actions, reflections, XP, achievements, and streaks.
+- [x] Establish and document the chosen visual direction in `ideas.md`.
+- [x] Build the responsive application shell and primary navigation.
+- [x] Implement the Today, Lesson, Course Map, Achievements, Progress, and Takeaways experiences.
+- [x] Persist all meaningful user progress in localStorage.
+- [x] Add accessible keyboard interactions, feedback states, and respect for reduced-motion preferences.
+- [x] Verify the application at desktop and mobile sizes, then prepare a saved project version.

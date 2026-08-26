@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+<defs>
+  <linearGradient id="pap" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#f7eeda"/><stop offset="60%" stop-color="#f1e5cb"/><stop offset="100%" stop-color="#e7d9ba"/></linearGradient>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#9aa8b4" stop-opacity=".34"/><stop offset="62%" stop-color="#e0cda0" stop-opacity=".13"/>
+    <stop offset="100%" stop-color="#d99a5e" stop-opacity=".20"/></linearGradient>
+  <linearGradient id="ga" x1="0.1" y1="0" x2="0.9" y2="1">
+    <stop offset="0%" stop-color="#c9a878"/><stop offset="100%" stop-color="#8a6a4a"/></linearGradient>
+  <linearGradient id="gb" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#f3e8cf"/><stop offset="58%" stop-color="#e8dbbc"/><stop offset="100%" stop-color="#c9b691"/></linearGradient>
+  <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+    <stop offset="0%" stop-color="#f4d489" stop-opacity=".85"/><stop offset="100%" stop-color="#f4d489" stop-opacity="0"/></radialGradient>
+  <pattern id="hx" width="5" height="5" patternTransform="rotate(38)" patternUnits="userSpaceOnUse">
+    <line x1="0" y1="0" x2="0" y2="5" stroke="#2f3d2a" stroke-width="1" opacity=".40"/></pattern>
+  <pattern id="hx2" width="3.2" height="3.2" patternTransform="rotate(-40)" patternUnits="userSpaceOnUse">
+    <line x1="0" y1="0" x2="0" y2="3.2" stroke="#2f3d2a" stroke-width="1" opacity=".48"/></pattern>
+  <pattern id="hf" width="8" height="8" patternTransform="rotate(15)" patternUnits="userSpaceOnUse">
+    <line x1="0" y1="0" x2="0" y2="8" stroke="#2f3d2a" stroke-width=".8" opacity=".20"/></pattern>
+  <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="4"/>
+    <feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0.13"/></feComponentTransfer></filter>
+  <filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="2.2" xChannelSelector="R" yChannelSelector="G"/></filter>
+</defs>
+<rect width="800" height="500" fill="url(#pap)"/>
+<rect width="800" height="500" fill="url(#sky)"/>
+<g stroke="#2f3d2a" stroke-width=".9" opacity=".14" fill="none">
+  <path d="M-10 84q200-24 400 0t420 0M-10 116q200-22 400 0t420 0M-10 148q200-20 400 0t422 0"/></g>
+<g filter="url(#rough)">
+
+  <path d="M0 300l110-46 92 34 120-46 118 44 160-34 200 48v54H0z" fill="#ccd0cd" stroke="#2f3d2a" stroke-width="1.8" opacity=".4"/>
+
+  <!-- The sail loft: pitched roof, big doors, a hoist beam and a loading bay. -->
+  <g><path d="M96 442V246h284v196z" fill="#efe3c8" stroke="#2f3d2a" stroke-width="3" /><path d="M96 442V246h284v196z" fill="url(#hf)" stroke="none" opacity=".5"/><path d="M96 442V246h284v196z" fill="none" stroke="#2f3d2a" stroke-width="3" />
+     <path d="M80 246l158-72 158 72z" fill="#c9b691" stroke="#2f3d2a" stroke-width="3" />
+     <path d="M92 224h292M104 204h268" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".45" stroke-linecap="round"/>
+     <path d="M238 174v-22" fill="none" stroke="#2f3d2a" stroke-width="2.6" /><path d="M238 152l34 12-34 12z" fill="#e2b877" stroke="#2f3d2a" stroke-width="2.2" />
+     <path d="M124 282h24v26h-24z" fill="#e2b877" stroke="#2f3d2a" stroke-width="2.2" /><path d="M136 282v26M124 295h24" fill="none" stroke="#2f3d2a" stroke-width="1.8" opacity=".65" stroke-linecap="round"/><path d="M176 282h24v26h-24z" fill="#e2b877" stroke="#2f3d2a" stroke-width="2.2" /><path d="M188 282v26M176 295h24" fill="none" stroke="#2f3d2a" stroke-width="1.8" opacity=".65" stroke-linecap="round"/><path d="M228 282h24v26h-24z" fill="#e2b877" stroke="#2f3d2a" stroke-width="2.2" /><path d="M240 282v26M228 295h24" fill="none" stroke="#2f3d2a" stroke-width="1.8" opacity=".65" stroke-linecap="round"/><path d="M280 282h24v26h-24z" fill="#e2b877" stroke="#2f3d2a" stroke-width="2.2" /><path d="M292 282v26M280 295h24" fill="none" stroke="#2f3d2a" stroke-width="1.8" opacity=".65" stroke-linecap="round"/><path d="M332 282h24v26h-24z" fill="#e2b877" stroke="#2f3d2a" stroke-width="2.2" /><path d="M344 282v26M332 295h24" fill="none" stroke="#2f3d2a" stroke-width="1.8" opacity=".65" stroke-linecap="round"/>
+     <path d="M124 340h24v26h-24z" fill="#e2b877" stroke="#2f3d2a" stroke-width="2.2" /><path d="M136 340v26M124 353h24" fill="none" stroke="#2f3d2a" stroke-width="1.8" opacity=".65" stroke-linecap="round"/><path d="M176 340h24v26h-24z" fill="#e2b877" stroke="#2f3d2a" stroke-width="2.2" /><path d="M188 340v26M176 353h24" fill="none" stroke="#2f3d2a" stroke-width="1.8" opacity=".65" stroke-linecap="round"/><path d="M280 340h24v26h-24z" fill="#e2b877" stroke="#2f3d2a" stroke-width="2.2" /><path d="M292 340v26M280 353h24" fill="none" stroke="#2f3d2a" stroke-width="1.8" opacity=".65" stroke-linecap="round"/><path d="M332 340h24v26h-24z" fill="#e2b877" stroke="#2f3d2a" stroke-width="2.2" /><path d="M344 340v26M332 353h24" fill="none" stroke="#2f3d2a" stroke-width="1.8" opacity=".65" stroke-linecap="round"/>
+     <path d="M212 442v-84h56v84z" fill="#3f5a3a" stroke="#2f3d2a" stroke-width="2.6" /><path d="M240 358v84M220 396h16M244 396h16" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".5" stroke-linecap="round"/>
+     <path d="M238 246h-14v-22h28v22z" fill="#cbb08a" stroke="#2f3d2a" stroke-width="2.4" />
+     <path d="M238 226v-32M224 194h28" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".7" stroke-linecap="round"/></g>
+
+  <!-- Timber gantry crane, with pulley block and hanging hook. -->
+  <g><path d="M470 442V166h22v276z" fill="#c9a878" stroke="#2f3d2a" stroke-width="2.8" />
+     <path d="M462 166h206v20H462z" fill="#c9a878" stroke="#2f3d2a" stroke-width="2.8" />
+     <path d="M492 196l166-24M492 232l166-46" fill="none" stroke="#2f3d2a" stroke-width="2.2" opacity=".6" stroke-linecap="round"/>
+     <path d="M652 186v58" fill="none" stroke="#2f3d2a" stroke-width="2.6" opacity=".8" stroke-linecap="round"/>
+     <path d="M638 244h30v26h-30z" fill="#e2b877" stroke="#2f3d2a" stroke-width="2.4" /><path d="M646 244v26M660 244v26" fill="none" stroke="#2f3d2a" stroke-width="1.8" opacity=".6" stroke-linecap="round"/>
+     <path d="M653 270v34" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".75" stroke-linecap="round"/><path d="M642 304q11 22 22 0" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".8" stroke-linecap="round"/>
+     <path d="M470 442v-24h22v24M470 380h22" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".5" stroke-linecap="round"/></g>
+
+  <!-- A hull under construction on the stocks: frames still open. -->
+  <g><path d="M470 442q46-56 130-56t130 56z" fill="#dfd0ab" stroke="#2f3d2a" stroke-width="2.8" />
+     <path d="M470 442q46-56 130-56t130 56z" fill="url(#hx2)" stroke="none" opacity=".26"/>
+     <path d="M470 442q46-56 130-56t130 56z" fill="none" stroke="#2f3d2a" stroke-width="2.8" />
+     <path d="M508 442q34-38 92-38t92 38M530 442q28-28 70-28t70 28" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".55" stroke-linecap="round"/>
+     <path d="M540 442v-44M580 442v-52M620 442v-52M660 442v-44" fill="none" stroke="#2f3d2a" stroke-width="2.2" opacity=".65" stroke-linecap="round"/>
+     <path d="M600 386v-92" fill="none" stroke="#2f3d2a" stroke-width="2.8" /><path d="M600 306h40M600 336h52" fill="none" stroke="#2f3d2a" stroke-width="2.2" opacity=".55" stroke-linecap="round"/>
+     <path d="M498 442v18M702 442v18" fill="none" stroke="#2f3d2a" stroke-width="2.6" opacity=".8" stroke-linecap="round"/></g>
+
+  <path d="M0 442h800V500H0z" fill="#d9c7a2" stroke="#2f3d2a" stroke-width="2.6" /><path d="M0 442h800V500H0z" fill="url(#hf)" stroke="none" opacity=".5"/>
+  <path d="M0 461h800" fill="none" stroke="#2f3d2a" stroke-width="1.6" opacity=".4" stroke-linecap="round"/><path d="M0 481h800" fill="none" stroke="#2f3d2a" stroke-width="1.6" opacity=".4" stroke-linecap="round"/><path d="M57 442v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M114 442v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M171 442v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M229 442v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M286 442v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M343 442v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M400 442v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M457 442v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M514 442v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M571 442v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M629 442v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M686 442v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M743 442v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M29 461v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M86 461v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M143 461v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M200 461v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M257 461v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M314 461v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M371 461v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M429 461v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M486 461v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M543 461v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M600 461v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M657 461v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M714 461v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M771 461v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M57 481v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M114 481v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M171 481v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M229 481v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M286 481v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M343 481v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M400 481v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M457 481v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M514 481v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M571 481v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M629 481v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M686 481v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/><path d="M743 481v19" fill="none" stroke="#2f3d2a" stroke-width="1.4" opacity=".3" stroke-linecap="round"/>
+
+  <!-- Stacked timber, barrels and a coil of rope, at the near edge. -->
+  <g><path d="M40 442h84v13h-84z" fill="#c9a878" stroke="#2f3d2a" stroke-width="2.2" /><path d="M44 429h84v13h-84z" fill="#c9a878" stroke="#2f3d2a" stroke-width="2.2" /><path d="M48 416h84v13h-84z" fill="#c9a878" stroke="#2f3d2a" stroke-width="2.2" /><path d="M52 403h84v13h-84z" fill="#c9a878" stroke="#2f3d2a" stroke-width="2.2" /></g>
+  <g><path d="M708 442v-38q14-6 28 0v38z" fill="#cbb08a" stroke="#2f3d2a" stroke-width="2.4" /><path d="M708 424h28M708 412h28" fill="none" stroke="#2f3d2a" stroke-width="1.8" opacity=".55" stroke-linecap="round"/><path d="M748 442v-38q14-6 28 0v38z" fill="#cbb08a" stroke="#2f3d2a" stroke-width="2.4" /><path d="M748 424h28M748 412h28" fill="none" stroke="#2f3d2a" stroke-width="1.8" opacity=".55" stroke-linecap="round"/></g>
+  <path d="M172 470q26-16 52 0q-16 12-52 0M182 470q16-8 32 0q-10 6-32 0" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".7" stroke-linecap="round"/>
+  <path d="M551 108q4-5 9 0q4-5 9 0" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".5" stroke-linecap="round"/><path d="M597 88q4-5 9 0q4-5 9 0" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".5" stroke-linecap="round"/><path d="M639 120q4-5 9 0q4-5 9 0" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".5" stroke-linecap="round"/>
+</g>
+<rect width="800" height="500" filter="url(#grain)" opacity=".75"/>
+</svg>
