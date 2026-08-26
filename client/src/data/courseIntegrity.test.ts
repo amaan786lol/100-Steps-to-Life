@@ -143,7 +143,10 @@ describe.each([
   it("keeps presentation about preparation, never about attractiveness", () => {
     // The section teaches hygiene, tidiness and dressing for the occasion. It
     // must never drift into ranking how people look.
-    const appearance = /attractive|good-?looking|prettier|handsome|ugly|better looking|body ?type|slim|fat\b|beauty standard/i;
+    // The body-shape words are anchored on both sides: without a leading
+    // boundary, "slim" matches inside "Muslim" and this guard would quietly
+    // push the word out of an Islamic course.
+    const appearance = /attractive|good-?looking|prettier|handsome|ugly|better looking|body ?type|\bslim\b|\bfat\b|beauty standard/i;
     for (const lesson of section) {
       const text = [lesson.title, lesson.why, lesson.lesson, lesson.keyIdea, lesson.example, lesson.actionPrompt,
         lesson.actionHint, lesson.bonus,
