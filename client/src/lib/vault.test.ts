@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  DEFAULT_BAR, HOLD_CAP, HOLD_DAYS, MAX_LENGTH, MIN_LENGTH, awardHold, awardPerfect, canOpen,
+  DEFAULT_BAR, HOLD_CAP, HOLD_DAYS, MAX_LENGTH, MIN_LENGTH, awardHold, awardPerfect, canOpen, isWeakKey,
   canStartHold, cancelNext, carryOver, clampLength, daysBetween, daysUntilDue, dueOn, holdDaysLeft,
   isDue, isOpen, isPerfect, makeKey, meetsBar, newVault, noteOpened, openedOn, opensInLast,
   prepareNext, runningHold, startHold, vaultLine, type Vault,
@@ -19,17 +19,18 @@ const fakeCrypto = (...bytes: number[]): Crypto => {
 };
 
 const at = (today: string, overrides: Partial<Vault> = {}): Vault => ({
-  key: "BCDFGHJK", since: today, next: null, rotationDays: 7, length: 8, openedOn: [],
+  key: "65358029", since: today, next: null, rotationDays: 7, length: 8, openedOn: [],
   holds: [], active: null, earnedOn: [], ...overrides,
 });
 
 describe("the key the blocker will accept", () => {
-  it("uses only letters, because the blocker refuses digits", () => {
-    for (let run = 0; run < 40; run++) expect(makeKey()).toMatch(/^[A-Z]{8}$/);
+  it("uses only digits, because that is all the blocker accepts", () => {
+    for (let run = 0; run < 40; run++) expect(makeKey()).toMatch(/^[0-9]{8}$/);
   });
 
-  it("contains no vowels, so a key never spells a word worth remembering", () => {
-    for (let run = 0; run < 40; run++) expect(makeKey()).not.toMatch(/[AEIOU]/);
+  it("does not hand out a key a person would keep by accident", () => {
+    // The threat is not a stranger guessing. It is the owner remembering.
+    for (let run = 0; run < 60; run++) expect(isWeakKey(makeKey())).toBe(false);
   });
 
   it("stays inside the length the blocker allows", () => {
@@ -45,8 +46,9 @@ describe("the key the blocker will accept", () => {
   });
 
   it("maps random bytes onto the alphabet", () => {
-    // Byte 0 -> B, byte 1 -> C. The point is that it reads the source given.
-    expect(makeKey(4, fakeCrypto(0, 1, 0, 1))).toBe("BCBC");
+    // 0 -> "0", 5 -> "5". Weak draws are redrawn, so the source is exhausted
+    // and the last attempt is taken rather than looping forever.
+    expect(makeKey(4, fakeCrypto(1, 7, 4, 2))).toBe("1742");
   });
 
   it("does not hand out the same key twice in a row", () => {
@@ -116,8 +118,8 @@ describe("handing a new key over", () => {
     // The app cannot see the blocker. Swapping early would lock the learner
     // out of something they earned.
     const ready = prepareNext(at("2026-03-01"));
-    expect(ready.next).toMatch(/^[A-Z]{8}$/);
-    expect(ready.key).toBe("BCDFGHJK");
+    expect(ready.next).toMatch(/^[0-9]{8}$/);
+    expect(ready.key).toBe("65358029");
   });
 
   it("does not replace a waiting key that may already be written down", () => {
@@ -143,7 +145,7 @@ describe("handing a new key over", () => {
     const ready = prepareNext(at("2026-03-01"));
     const cancelled = cancelNext(ready);
     expect(cancelled.next).toBeNull();
-    expect(cancelled.key).toBe("BCDFGHJK");
+    expect(cancelled.key).toBe("65358029");
   });
 
   it("keeps the record of opens across a replacement", () => {
@@ -224,7 +226,7 @@ describe("what Sly says at the vault", () => {
 describe("a fresh vault", () => {
   it("starts with a key already in it and nothing waiting", () => {
     const vault = newVault("2026-03-01");
-    expect(vault.key).toMatch(/^[A-Z]{8}$/);
+    expect(vault.key).toMatch(/^[0-9]{8}$/);
     expect(vault.next).toBeNull();
     expect(vault.since).toBe("2026-03-01");
     expect(vault.openedOn).toEqual([]);
@@ -351,5 +353,36 @@ describe("hold keys", () => {
   it("keeps banked holds across a rotation", () => {
     const held = awardPerfect(at("2026-03-01"), "2026-03-02", perfect);
     expect(carryOver(prepareNext(held), "2026-03-08").holds).toHaveLength(1);
+  });
+});
+
+describe("keys a person would keep by accident", () => {
+  it("rejects a repeated half", () => {
+    expect(isWeakKey("51735173")).toBe(true);
+  });
+
+  it("rejects runs, up and down", () => {
+    expect(isWeakKey("83456729")).toBe(true);
+    expect(isWeakKey("87321094")).toBe(true);
+  });
+
+  it("rejects three of the same digit together", () => {
+    expect(isWeakKey("62229417")).toBe(true);
+  });
+
+  it("rejects anything that reads as a year", () => {
+    expect(isWeakKey("20081111")).toBe(true);
+    expect(isWeakKey("1996")).toBe(true);
+  });
+
+  it("rejects a key made of only one or two digits", () => {
+    expect(isWeakKey("12121212")).toBe(true);
+    expect(isWeakKey("77777777")).toBe(true);
+  });
+
+  it("accepts an ordinary scattered key", () => {
+    expect(isWeakKey("65358029")).toBe(false);
+    expect(isWeakKey("70232711")).toBe(false);
+    expect(isWeakKey("4827")).toBe(false);
   });
 });

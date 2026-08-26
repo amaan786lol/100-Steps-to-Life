@@ -165,7 +165,7 @@ export function VaultView({
         <span className="eyebrow">MAKE A NEW KEY</span>
         <h2>Change the password.</h2>
         <p>
-          Eight letters gets memorised, so it is replaced every week. Generate one here, have whoever
+          Eight digits gets memorised fast, so it is replaced every week. Generate one here, have whoever
           set the blocker up enter it, then confirm — the old key keeps working until you do.
         </p>
 

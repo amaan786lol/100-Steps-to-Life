@@ -11,9 +11,12 @@
  * one is generated, someone else carries it into the blocker, and whatever was
  * memorised last week stops working.
  *
- * Letters are drawn from consonants only. Not for entropy — twenty letters over
- * eight places is far past anything that gets guessed — but because a string
- * with no vowels forms no word, and words are what get remembered.
+ * The blocker takes digits, so keys are digits. That is a weaker starting
+ * position than letters were: people hold eight-digit numbers in their heads
+ * without trying, which is why generated keys are screened. A raw random
+ * source will happily produce 20081111 or 12344321, and those are remembered
+ * forever. Anything that reads as a year, a run, a repeated half, or three of
+ * the same digit together is rejected and drawn again.
  *
  * Two keys exist during a handover: the one the blocker currently holds, and
  * the one waiting to replace it. They are tracked separately because the app
@@ -26,8 +29,28 @@
  * that. Rotation is what keeps the copy stale.
  */
 
-/** Consonants only: no vowels, so a key spells nothing and reads as noise. */
-const ALPHABET = "BCDFGHJKLMNPQRSTVWXZ";
+/** The blocker accepts digits only. */
+const ALPHABET = "0123456789";
+
+/**
+ * Patterns a person keeps without meaning to. Screening these costs a little
+ * entropy and buys much more than it costs, because the threat here is not a
+ * stranger guessing — it is the owner remembering.
+ */
+export function isWeakKey(key: string): boolean {
+  if (new Set(key).size <= 2) return true;                       // 12121212, 11112222
+  if (/(\d)\1\1/.test(key)) return true;                         // three in a row
+  if (/^(19|20)/.test(key) && key.length >= 4) return true;      // reads as a year
+  const half = key.length / 2;
+  if (key.length % 2 === 0 && key.slice(0, half) === key.slice(half)) return true;  // 51735173
+  const ladder = "01234567890";
+  const down = "09876543210";
+  for (let at = 0; at + 3 <= key.length; at++) {
+    const run = key.slice(at, at + 3);
+    if (ladder.includes(run) || down.includes(run)) return true; // 456, 321
+  }
+  return false;
+}
 
 /** What the blocker accepts. Eight is the ceiling, and worth using in full. */
 export const MIN_LENGTH = 4;
@@ -57,11 +80,22 @@ export function meetsBar(result: LessonResult | undefined, bar = DEFAULT_BAR): b
 export const clampLength = (length: number) =>
   Math.max(MIN_LENGTH, Math.min(MAX_LENGTH, Math.round(length)));
 
+/** How many times to redraw before accepting whatever came out. */
+const MAX_DRAWS = 40;
+
 export function makeKey(length = DEFAULT_LENGTH, random: Crypto = globalThis.crypto): string {
   const size = clampLength(length);
   const bytes = new Uint8Array(size);
-  random.getRandomValues(bytes);
-  return Array.from(bytes, (byte) => ALPHABET[byte % ALPHABET.length]).join("");
+  let key = "";
+  // Redraw past the memorable patterns. Bounded, because a short key has few
+  // enough arrangements that insisting could loop for a long time — at four
+  // digits the screen throws away a real share of the space.
+  for (let draw = 0; draw < MAX_DRAWS; draw++) {
+    random.getRandomValues(bytes);
+    key = Array.from(bytes, (byte) => ALPHABET[byte % ALPHABET.length]).join("");
+    if (!isWeakKey(key)) return key;
+  }
+  return key;
 }
 
 /* --- The vault ------------------------------------------------------------ */
