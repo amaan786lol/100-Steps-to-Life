@@ -688,6 +688,7 @@ export default function Home() {
                 <div className="mobile-theme-control"><span>APPEARANCE</span><ThemeSelector theme={theme} onChange={setTheme} compact /></div>
                 <button role="menuitem" onClick={() => chooseView("achievements")}>Achievements</button>
                 <button role="menuitem" onClick={() => chooseView("takeaways")}>Takeaways</button>
+                <button role="menuitem" onClick={() => chooseView("vault")}>Vault</button>
                 <button role="menuitem" onClick={resetProgress}>Reset local progress</button>
               </div>
             )}
