@@ -33,6 +33,7 @@ import {
   Sprout,
   Sun,
   Target,
+  KeyRound,
   Trophy,
   Upload,
   WifiOff,
@@ -41,6 +42,10 @@ import {
 } from "lucide-react";
 import { HabitPlanner } from "@/components/HabitPlanner";
 import { SlyCompanion } from "@/components/Sly";
+import { VaultView } from "../components/VaultView";
+import { bankRecheckHold } from "../lib/vaultStore";
+import { HOLD_DAYS } from "../lib/vault";
+import { localDayKey } from "../lib/screenTimeUsage";
 import { RECHECK_LENGTH, buildRecheck, buildTrial, finalTrials, getLesson, lessons, passMark, phases, reviewSlotsFor, selectReview, totalQuestionsForDay, type CoursePhase, type Lesson, type QuizQuestion, type RecallRecord } from "../data/course";
 
 const STORAGE_KEY = "hundred-steps-to-life-v1";
@@ -64,9 +69,20 @@ const ISLAND_IMAGES: Record<number, string> = {
   10: "/media/island-summit.svg",
 };
 
-type View = "today" | "map" | "habits" | "achievements" | "progress" | "takeaways" | "lesson" | "recheck" | "practice" | "final";
+type View = "today" | "map" | "habits" | "achievements" | "progress" | "takeaways" | "vault" | "lesson" | "recheck" | "practice" | "final";
 type LessonStage = "read" | "quiz" | "action" | "complete";
-type QuizResult = { score: number; passed: boolean; perfect: boolean };
+type QuizResult = {
+  score: number;
+  passed: boolean;
+  perfect: boolean;
+  /**
+   * How long the check actually was. Recorded rather than recomputed: a day's
+   * nominal length includes review slots, and early days have fewer earlier
+   * days to draw them from, so the two do not always agree. Optional because
+   * journals written before this existed do not have it.
+   */
+  outOf?: number;
+};
 type Theme = "morning" | "night" | "green";
 type TravelTransition = { from: CoursePhase; to: CoursePhase };
 
@@ -77,7 +93,7 @@ function getPreviewTheme(): Theme | undefined {
 
 function getPreviewView(): View | undefined {
   const requested = new URLSearchParams(window.location.search).get("view");
-  return requested === "today" || requested === "map" || requested === "habits" || requested === "achievements" || requested === "progress" || requested === "takeaways" || requested === "lesson" || requested === "final" ? requested : undefined;
+  return requested === "today" || requested === "map" || requested === "habits" || requested === "achievements" || requested === "progress" || requested === "takeaways" || requested === "vault" || requested === "lesson" || requested === "final" ? requested : undefined;
 }
 
 type AppData = {
@@ -181,6 +197,39 @@ export function recordAnswer(previous: AppData, correct: boolean, source?: { fro
 }
 
 /** An island is travelled once all ten of its days are recorded. */
+/** Marks for passing a day's check. */
+export const RECHECK_MARKS = 60;
+export const CHECK_MARKS = 10;
+/** What a perfect check pays instead. Deliberately several times the pass. */
+export const PERFECT_MARKS = 40;
+/** Added per consecutive perfect day before this one, up to the cap. */
+export const PERFECT_RUN_MARKS = 10;
+export const PERFECT_RUN_CAP = 5;
+
+/**
+ * How many days in a row ending just before `day` were answered perfectly.
+ * Derived from the record rather than stored, so it cannot drift out of step
+ * with the days it is counting.
+ */
+export function perfectRun(data: AppData, day: number): number {
+  let run = 0;
+  for (let earlier = day - 1; earlier >= 1; earlier--) {
+    if (!data.quizHistory[earlier]?.perfect) break;
+    run++;
+  }
+  return run;
+}
+
+/**
+ * What a check is worth. A perfect one pays several times a pass, and a run of
+ * them pays more again — the reward is for the standard held, not for a day
+ * missed later.
+ */
+export function checkMarks(data: AppData, day: number, perfect: boolean): number {
+  if (!perfect) return CHECK_MARKS;
+  return PERFECT_MARKS + Math.min(perfectRun(data, day), PERFECT_RUN_CAP) * PERFECT_RUN_MARKS;
+}
+
 export const islandTravelled = (data: AppData, phaseId: number) =>
   phaseCompleteCount(data, (phaseId - 1) * 10 + 1) === 10;
 
@@ -356,6 +405,16 @@ export default function Home() {
   const achievements = useMemo(() => achievementList(data), [data]);
   const coursePercent = Math.round((data.completedDays.length / 100) * 100);
   const accuracy = calculateAccuracy(data);
+  // The vault only cares about today's own check: passing yesterday does not
+  // open today. quizHistory keeps the count right; the length comes from the
+  // day itself, since it grows with the island.
+  const vaultResult = useMemo(() => {
+    const record = data.quizHistory[data.currentDay];
+    if (!record) return undefined;
+    // Older journals did not record the length; the day's nominal count is the
+    // best available fallback for those.
+    return { score: record.score, outOf: record.outOf ?? totalQuestionsForDay(data.currentDay) };
+  }, [data.quizHistory, data.currentDay]);
   const completedCurrent = data.completedDays.includes(selectedDay);
   const canOpenDay = (day: number) => day <= data.currentDay || data.completedDays.includes(day);
 
@@ -437,7 +496,8 @@ export default function Home() {
     setRecheckStatus("passed");
     setNotice("");
     if (!recheckPassed(data, recheckPhaseId)) {
-      setData({ ...data, xp: data.xp + 40, rechecks: { ...data.rechecks, [recheckPhaseId]: { score, passed: true } } });
+      setData({ ...data, xp: data.xp + RECHECK_MARKS, rechecks: { ...data.rechecks, [recheckPhaseId]: { score, passed: true } } });
+      bankRecheckHold(localDayKey());
     }
     if (recheckPhaseId < 10) {
       setTravelTransition({ from: phases[recheckPhaseId - 1], to: phases[recheckPhaseId] });
@@ -464,13 +524,15 @@ export default function Home() {
       return;
     }
     setQuizStatus("passed");
-    setNotice(perfect ? "Excellent recall. Now turn the idea into a real action." : "You understood the core idea. Now put it to work.");
+    setNotice(perfect
+      ? `Every one right. ${HOLD_DAYS.perfect} days of vault cover banked, and the marks to match.`
+      : "You understood the core idea. Now put it to work.");
     setData((previous) => {
       if (previous.quizHistory[lesson.day]?.passed) return previous;
       return {
         ...previous,
-        xp: previous.xp + 10 + (perfect ? 5 : 0),
-        quizHistory: { ...previous.quizHistory, [lesson.day]: { score, passed, perfect } },
+        xp: previous.xp + checkMarks(previous, lesson.day, perfect),
+        quizHistory: { ...previous.quizHistory, [lesson.day]: { score, passed, perfect, outOf: activeQuiz.length } },
       };
     });
     setStage("action");
@@ -600,6 +662,7 @@ export default function Home() {
           <NavButton icon={Award} label="Achievements" active={view === "achievements"} onClick={() => chooseView("achievements")} />
           <NavButton icon={Target} label="Progress" active={view === "progress"} onClick={() => chooseView("progress")} />
           <NavButton icon={PencilLine} label="Takeaways" active={view === "takeaways"} onClick={() => chooseView("takeaways")} />
+          <NavButton icon={KeyRound} label="Vault" active={view === "vault"} onClick={() => chooseView("vault")} />
         </nav>
         <div className="rail-bottom-note">
           <span className="note-pin">FIELD NOTE</span>
@@ -639,6 +702,7 @@ export default function Home() {
           {view === "achievements" && <AchievementsView achievements={achievements} data={data} />}
           {view === "progress" && <ProgressView data={data} coursePercent={coursePercent} accuracy={accuracy} onPractise={openPractice} />}
           {view === "takeaways" && <TakeawaysView data={data} onStart={startToday} />}
+          {view === "vault" && <VaultView xp={data.xp} courseDay={data.currentDay} result={vaultResult} />}
           {view === "lesson" && (
             <LessonView
               lesson={lesson}

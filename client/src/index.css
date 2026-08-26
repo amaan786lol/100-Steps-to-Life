@@ -1231,3 +1231,49 @@ textarea:focus { border-color: var(--moss); box-shadow: 0 0 0 3px rgba(53, 106, 
 .setup-list.salah-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
 .setup-list.salah-list strong { color: var(--ink); font: 600 15px "Fraunces", Georgia, serif; }
 .setup-list.salah-list input { padding: 7px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); color: var(--ink); font-size: 14px; font-weight: 700; }
+
+/* --- The vault ------------------------------------------------------------ */
+.vault-view { display: grid; gap: 16px; }
+.vault-balances { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.vault-balance { display: flex; align-items: center; gap: 14px; padding: 16px; }
+.vault-balance h3 { margin: 2px 0 4px; font-size: 30px; line-height: 1; }
+.vault-balance h3 small { font-size: 14px; color: var(--muted); }
+.vault-balance p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.4; }
+.vault-balance .label { color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .1em; }
+
+.vault-door { display: grid; gap: 14px; padding: 18px; border: 2px dashed var(--line); }
+.vault-door.is-open { border-style: solid; border-color: var(--moss); }
+.vault-sly { display: flex; align-items: center; gap: 12px; }
+.vault-sly p { margin: 0; color: var(--ink-soft); font-size: 13px; line-height: 1.45; }
+.vault-sly > :first-child { flex: 0 0 auto; width: 54px; }
+
+.vault-key-panel { display: grid; justify-items: center; gap: 10px; padding: 18px 14px; border-radius: 12px; background: var(--paper-deep); text-align: center; }
+.vault-key-panel.locked { background: color-mix(in srgb, var(--paper-deep) 60%, transparent); }
+.vault-key-panel .label { color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .12em; }
+.vault-key { margin: 0; font-family: "Fraunces", Georgia, serif; font-size: clamp(26px, 9vw, 40px); font-weight: 700; letter-spacing: .22em; text-indent: .22em; word-break: break-all; }
+.vault-locked-mark { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--paper); color: var(--muted); }
+.vault-locked-mark svg { width: 18px; height: 18px; }
+.vault-locked-note { margin: 0; color: var(--muted); font-size: 12px; }
+.vault-copy { display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); color: var(--ink); font-size: 11px; font-weight: 800; }
+.vault-copy svg { width: 13px; height: 13px; }
+.vault-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; justify-content: space-between; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .04em; }
+
+.vault-handover { display: grid; gap: 10px; padding: 18px; }
+.vault-handover h2 { margin: 0; font-size: 19px; }
+.vault-handover > p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.vault-handover.is-due { border-color: var(--gold); background: var(--gold-pale); }
+.vault-next { display: grid; justify-items: center; gap: 10px; padding: 14px; border-radius: 12px; background: var(--paper); }
+.vault-next .label { color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .12em; }
+.vault-next-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.vault-honest { margin: 0; padding: 0 4px 6px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+
+@media (min-width: 720px) { .vault-balances { grid-template-columns: 1fr 1fr; } }
+.theme-night .vault-key-panel { background: #102a34; }
+.theme-night .vault-next { background: #0e2029; }
+.theme-night .vault-handover.is-due { background: #2b281a; border-color: #705c35; }
+.theme-green .vault-key-panel { background: #eaf3e6; }
+.vault-holds { display: grid; gap: 8px; width: 100%; }
+.vault-holds .secondary-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; width: 100%; }
+.vault-holds .secondary-button svg { flex: 0 0 auto; width: 14px; height: 14px; }
+.vault-key-panel .primary-button, .vault-key-panel .secondary-button { display: inline-flex; align-items: center; gap: 7px; }
+.vault-key-panel .primary-button svg { width: 15px; height: 15px; }

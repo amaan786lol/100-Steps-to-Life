@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COMBO_STRIKE_CAP, COMBO_STRIKE_EVERY, calculateAccuracy, completeDay, newlyUnlocked, recallStrength, recordAnswer, strikeValue, weakestDays } from "./Home";
+import { CHECK_MARKS, COMBO_STRIKE_CAP, COMBO_STRIKE_EVERY, PERFECT_MARKS, PERFECT_RUN_CAP, PERFECT_RUN_MARKS, calculateAccuracy, checkMarks, completeDay, newlyUnlocked, perfectRun, recallStrength, recordAnswer, strikeValue, weakestDays } from "./Home";
 import { getLesson, selectReview, totalQuestionsForDay } from "../data/course";
 
 const blank = {
@@ -277,5 +277,42 @@ describe("recordAnswer and recall", () => {
 
   it("leaves recall alone for a question that is not a review", () => {
     expect(recordAnswer(blank, true).recall).toEqual({});
+  });
+});
+
+describe("what a check pays", () => {
+  const withHistory = (perfectDays: number[]) => ({
+    ...blank,
+    quizHistory: Object.fromEntries(
+      perfectDays.map((day) => [day, { score: 10, passed: true, perfect: true }]),
+    ),
+  });
+
+  it("pays the ordinary rate for a pass", () => {
+    expect(checkMarks(blank, 5, false)).toBe(CHECK_MARKS);
+  });
+
+  it("pays several times that for a perfect check", () => {
+    expect(checkMarks(blank, 5, true)).toBe(PERFECT_MARKS);
+    expect(PERFECT_MARKS).toBeGreaterThan(CHECK_MARKS * 3);
+  });
+
+  it("counts the run of perfect days before this one", () => {
+    expect(perfectRun(withHistory([1, 2, 3]), 4)).toBe(3);
+    expect(perfectRun(withHistory([1, 2]), 5)).toBe(0);   // day 4 breaks it
+    expect(perfectRun(blank, 1)).toBe(0);
+  });
+
+  it("pays more for a run held", () => {
+    expect(checkMarks(withHistory([1, 2, 3]), 4, true)).toBe(PERFECT_MARKS + 3 * PERFECT_RUN_MARKS);
+  });
+
+  it("caps the run bonus, so it rewards a standard rather than compounding forever", () => {
+    const long = withHistory(Array.from({ length: 20 }, (_, i) => i + 1));
+    expect(checkMarks(long, 21, true)).toBe(PERFECT_MARKS + PERFECT_RUN_CAP * PERFECT_RUN_MARKS);
+  });
+
+  it("pays nothing extra for a run when the day was not perfect", () => {
+    expect(checkMarks(withHistory([1, 2, 3]), 4, false)).toBe(CHECK_MARKS);
   });
 });

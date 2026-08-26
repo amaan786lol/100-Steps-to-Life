@@ -79,20 +79,33 @@ export type Vault = {
   length: number;
   /** Dates the key was handed over. An honesty record, nothing more. */
   openedOn: string[];
-  /** Super keys banked, from days answered perfectly. */
-  supers: number;
-  /** Dates a super key was earned, so one perfect day banks exactly one. */
-  superEarnedOn: string[];
-  /** Dates opened by spending a super rather than by passing that day. */
-  superSpentOn: string[];
+  /** Hold keys banked but not yet running. */
+  holds: Hold[];
+  /** The hold currently keeping the vault open, if any. */
+  active: ActiveHold | null;
+  /** Dates a hold was earned, so one day banks at most one from each source. */
+  earnedOn: string[];
 };
 
+/** Where a hold came from, and how long it keeps the vault open. */
+export type HoldSource = "perfect" | "recheck";
+
+export type Hold = { source: HoldSource; days: number };
+export type ActiveHold = Hold & { from: string };
+
 /**
- * How many super keys can be held at once. Uncapped, a strong fortnight would
- * bank enough opens to remove the gate for a month, which is the opposite of
+ * A perfect check is the harder thing to do on any given day, so it pays the
+ * longer hold. A recheck asks whether an island has actually stayed learned,
+ * which is a different kind of work and worth its own, smaller one.
+ */
+export const HOLD_DAYS: Record<HoldSource, number> = { perfect: 3, recheck: 2 };
+
+/**
+ * How many holds can be banked at once. Uncapped, a strong fortnight would
+ * bank enough days to remove the gate for a month, which is the opposite of
  * what they are for. Three is a cushion, not a bypass.
  */
-export const SUPER_CAP = 3;
+export const HOLD_CAP = 3;
 
 export const VAULT_STORAGE_KEY = "hundred-steps-vault-v1";
 
@@ -105,7 +118,7 @@ export function newVault(
   const size = clampLength(length);
   return {
     key: makeKey(size, random), since: today, next: null, rotationDays, length: size,
-    openedOn: [], supers: 0, superEarnedOn: [], superSpentOn: [],
+    openedOn: [], holds: [], active: null, earnedOn: [],
   };
 }
 
@@ -167,43 +180,69 @@ export const cancelNext = (vault: Vault): Vault => (vault.next ? { ...vault, nex
 export const canOpen = (result: LessonResult | undefined, bar = DEFAULT_BAR): boolean =>
   meetsBar(result, bar);
 
-/* --- Super keys ----------------------------------------------------------- */
+/* --- Hold keys ------------------------------------------------------------ */
 
 /** Every question right, on a check that actually had questions. */
 export const isPerfect = (result: LessonResult | undefined): boolean =>
   Boolean(result) && result!.outOf > 0 && result!.score === result!.outOf;
 
+const stamp = (date: string, source: HoldSource) => `${date}:${source}`;
+
 /**
- * Bank a super key for a day answered perfectly. One per day at most, and only
- * up to the cap — beyond that a perfect day is its own reward, which is the
- * right answer anyway.
+ * Bank a hold. One per day from each source, and only up to the cap — beyond
+ * that a perfect day is its own reward, which is the right answer anyway.
  */
-export function awardSuper(vault: Vault, date: string, result: LessonResult | undefined): Vault {
-  if (!isPerfect(result) || vault.superEarnedOn.includes(date)) return vault;
+export function awardHold(vault: Vault, date: string, source: HoldSource): Vault {
+  if (vault.earnedOn.includes(stamp(date, source))) return vault;
+  const earnedOn = [...vault.earnedOn, stamp(date, source)];
+  if (vault.holds.length >= HOLD_CAP) return { ...vault, earnedOn };
+  return { ...vault, earnedOn, holds: [...vault.holds, { source, days: HOLD_DAYS[source] }] };
+}
+
+/** Bank a hold for a perfect check, and nothing for a merely passed one. */
+export const awardPerfect = (vault: Vault, date: string, result: LessonResult | undefined): Vault =>
+  isPerfect(result) ? awardHold(vault, date, "perfect") : vault;
+
+/** Whether a running hold covers the given date. */
+export function holdCovers(active: ActiveHold | null, date: string): boolean {
+  if (!active) return false;
+  const elapsed = daysBetween(active.from, date);
+  return elapsed >= 0 && elapsed < active.days;
+}
+
+/** The hold currently running, or null once it has run out. */
+export const runningHold = (vault: Vault, date: string): ActiveHold | null =>
+  holdCovers(vault.active, date) ? vault.active : null;
+
+/** Days of cover left, counting today. Zero when nothing is running. */
+export function holdDaysLeft(vault: Vault, date: string): number {
+  const active = runningHold(vault, date);
+  return active ? active.days - daysBetween(active.from, date) : 0;
+}
+
+/**
+ * Start a banked hold. Refused while one is already running, so cover is never
+ * stacked or wasted, and refused on a day that is already open by passing.
+ */
+export function startHold(vault: Vault, index: number, date: string, result?: LessonResult, bar = DEFAULT_BAR): Vault {
+  if (runningHold(vault, date)) return vault;
+  if (canOpen(result, bar)) return vault;
+  const hold = vault.holds[index];
+  if (!hold) return vault;
   return {
     ...vault,
-    superEarnedOn: [...vault.superEarnedOn, date],
-    supers: Math.min(SUPER_CAP, vault.supers + 1),
+    holds: vault.holds.filter((_, at) => at !== index),
+    active: { ...hold, from: date },
   };
 }
 
-/**
- * Spend one to open a day that was not passed. Refused when the day is already
- * open, so a super is never burned on something that was free.
- */
-export function spendSuper(vault: Vault, date: string, result?: LessonResult, bar = DEFAULT_BAR): Vault {
-  if (vault.supers <= 0) return vault;
-  if (canOpen(result, bar) || vault.superSpentOn.includes(date)) return vault;
-  return { ...vault, supers: vault.supers - 1, superSpentOn: [...vault.superSpentOn, date] };
-}
+/** Whether starting one would achieve anything right now. */
+export const canStartHold = (vault: Vault, result: LessonResult | undefined, date: string, bar = DEFAULT_BAR): boolean =>
+  vault.holds.length > 0 && !runningHold(vault, date) && !canOpen(result, bar);
 
-/** Whether the vault is open today, by passing or by a super already spent. */
+/** Whether the vault is open today, by passing or by a hold that is running. */
 export const isOpen = (vault: Vault, result: LessonResult | undefined, date: string, bar = DEFAULT_BAR): boolean =>
-  canOpen(result, bar) || vault.superSpentOn.includes(date);
-
-/** Whether spending one would achieve anything right now. */
-export const canSpendSuper = (vault: Vault, result: LessonResult | undefined, date: string, bar = DEFAULT_BAR): boolean =>
-  vault.supers > 0 && !isOpen(vault, result, date, bar);
+  canOpen(result, bar) || holdCovers(vault.active, date);
 
 /** Record that the key was shown. The same date is never counted twice. */
 export function noteOpened(vault: Vault, date: string): Vault {
@@ -240,18 +279,23 @@ export function vaultLine(
   if (isDue(vault, today)) {
     return "This key is due to be replaced. Whatever you have memorised is about to stop working, which is the point of it.";
   }
-  if (vault.superSpentOn.includes(today) && !canOpen(result, bar)) {
-    return "Opened on a super key. You earned that on a day you got everything right — spend it and it is gone.";
+  const running = runningHold(vault, today);
+  if (running && !canOpen(result, bar)) {
+    const left = holdDaysLeft(vault, today);
+    const from = running.source === "perfect" ? "a perfect check" : "a recheck";
+    return `Held open by ${from}. ${left} day${left === 1 ? "" : "s"} left on it, then the check is back.`;
   }
   if (canOpen(result, bar)) {
     const opens = opensInLast(vault, today);
-    if (isPerfect(result)) return "Every one right. That banks a super key as well — here it is.";
+    if (isPerfect(result)) return `Every one right. That is ${HOLD_DAYS.perfect} days of cover banked as well — here it is.`;
     if (opens >= 5) return `Here it is. That is ${opens} days this week — worth knowing, not worth a lecture.`;
     return "Here it is. You did the day first, which was the whole deal.";
   }
   if (result && result.outOf > 0) {
     const needed = Math.ceil(result.outOf * bar);
-    const spare = vault.supers > 0 ? ` You are holding ${vault.supers}, if you would rather spend one.` : "";
+    const spare = vault.holds.length > 0
+      ? ` You are holding ${vault.holds.length} hold key${vault.holds.length === 1 ? "" : "s"}, if you would rather use one.`
+      : "";
     return `${result.score} out of ${result.outOf}. ${needed} would open it — the check can be taken again.${spare}`;
   }
   return `Day ${courseDay} first. Pass the check and the key is yours.`;
