@@ -57,6 +57,18 @@ describe("in the app without access yet", () => {
 });
 
 describe("with access granted", () => {
+  // The panel only counts usage up to the present moment, which is correct —
+  // a reading cannot include hours that have not happened yet. These fixtures
+  // sit at fixed clock hours, so without a frozen clock the suite silently
+  // measured zero whenever it ran before those hours had passed.
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const evening = new Date();
+    evening.setHours(23, 0, 0, 0);
+    vi.setSystemTime(evening);
+  });
+  afterEach(() => vi.useRealTimers());
+
   const withUsage = (pairs: Array<[number, number]>) =>
     install({ hasPermission: () => true, requestPermission: vi.fn(), readUsage: () => JSON.stringify(pairs) });
 

@@ -9,6 +9,8 @@
     <stop offset="0%" stop-color="#a9c6d4"/><stop offset="100%" stop-color="#6c93a8"/></linearGradient>
   <linearGradient id="gb" x1="0" y1="0" x2="1" y2="0">
     <stop offset="0%" stop-color="#f3e8cf"/><stop offset="58%" stop-color="#e8dbbc"/><stop offset="100%" stop-color="#c9b691"/></linearGradient>
+  <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+    <stop offset="0%" stop-color="#f4d489" stop-opacity=".85"/><stop offset="100%" stop-color="#f4d489" stop-opacity="0"/></radialGradient>
   <pattern id="hx" width="5" height="5" patternTransform="rotate(38)" patternUnits="userSpaceOnUse">
     <line x1="0" y1="0" x2="0" y2="5" stroke="#2f3d2a" stroke-width="1" opacity=".40"/></pattern>
   <pattern id="hx2" width="3.2" height="3.2" patternTransform="rotate(-40)" patternUnits="userSpaceOnUse">
@@ -18,25 +20,52 @@
   <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="4"/>
     <feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0.13"/></feComponentTransfer></filter>
   <filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" result="n"/>
-    <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4" xChannelSelector="R" yChannelSelector="G"/></filter>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="2.2" xChannelSelector="R" yChannelSelector="G"/></filter>
 </defs>
 <rect width="800" height="500" fill="url(#pap)"/>
 <rect width="800" height="500" fill="url(#sky)"/>
-<g stroke="#2f3d2a" stroke-width=".9" opacity=".15" fill="none">
-  <path d="M-10 96q200-26 400 0t420 0M-10 130q200-24 400 0t420 0M-10 164q200-22 400 0t422 0"/></g>
+<g stroke="#2f3d2a" stroke-width=".9" opacity=".14" fill="none">
+  <path d="M-10 84q200-24 400 0t420 0M-10 116q200-22 400 0t420 0M-10 148q200-20 400 0t422 0"/></g>
 <g filter="url(#rough)">
-<path d="M0 372q120-16 210 4t190 0 200-8 200 6V500H0z" fill="url(#ga)" stroke="#2f3d2a" stroke-width="2.8" /><path d="M0 372q120-16 210 4t190 0 200-8 200 6V500H0z" fill="url(#hf)" stroke="none" opacity=".5"/>
- <g stroke="#2f3d2a" stroke-width="2" opacity=".55" fill="none">
-   <path d="M40 400q60-10 110 0M180 420q70-12 130 0M420 396q70-10 130 0M600 424q70-12 130 0M120 448q80-12 150 0M480 452q80-12 150 0"/></g>
- <path d="M0 452q140-22 280-6t250-8 270 10V500H0z" fill="#efe1c0" stroke="#2f3d2a" stroke-width="2.8" />
- <path d="M0 452q140-22 280-6t250-8 270 10V500H0z" fill="url(#hf)" stroke="none" opacity=".45"/>
- <g><path d="M300 452V262h16v190z" fill="#e8dbbc" stroke="#2f3d2a" stroke-width="3.2" /><path d="M290 274h36" fill="none" stroke="#2f3d2a" stroke-width="3.2" /><path d="M308 262v-16" fill="none" stroke="#2f3d2a" stroke-width="2.6" />
-   <path d="M316 276l52 14-52 16z" fill="#e2b877" stroke="#2f3d2a" stroke-width="2.6" /></g>
- <g><path d="M470 448q34-30 96-30t96 30q-40 16-96 16t-96-16z" fill="#dfd0ab" stroke="#2f3d2a" stroke-width="3.2" />
-   <path d="M470 448q34-30 96-30t96 30q-40 16-96 16t-96-16z" fill="url(#hx2)" stroke="none" opacity=".5"/>
-   <path d="M566 418V330" fill="none" stroke="#2f3d2a" stroke-width="2.8" /><path d="M566 334l44 60h-44z" fill="#c9b691" stroke="#2f3d2a" stroke-width="2.6" /></g>
- <g><path d="M96 452q30-26 70-26t70 26z" fill="#d9c7a2" stroke="#2f3d2a" stroke-width="3.2" /><path d="M96 452q30-26 70-26t70 26z" fill="url(#hx2)" stroke="none" opacity=".5"/></g>
- <path d="M50 470h700" stroke="#2f3d2a" stroke-width="2.4" opacity=".5"/>
+
+  <circle cx="596" cy="252" r="96" fill="url(#glow)"/>
+  <path d="M596 300a48 48 0 1 1 0-96 48 48 0 0 1 0 96z" fill="#f0c983" stroke="#2f3d2a" stroke-width="2.6" />
+  <path d="M596 192v-24M528 252h-24M688 252h24M548 204l-18-18M644 300l18 18M644 204l18-18M548 300l-18 18" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".45" stroke-linecap="round"/>
+  <path d="M0 330l120-56 96 36 130-62 120 48 150-44 184 62V346H0z" fill="#c6cfc4" stroke="#2f3d2a" stroke-width="1.8" opacity=".5"/>
+  <path d="M596 330l72-38 84 30 48-14v22z" fill="#b9c5bd" stroke="#2f3d2a" stroke-width="1.8" opacity=".45"/>
+  <path d="M0 330q120-14 210 4t190-2 200-8 200 6V418H0z" fill="url(#ga)" stroke="#2f3d2a" stroke-width="2.8" /><path d="M0 330q120-14 210 4t190-2 200-8 200 6V418H0z" fill="url(#hf)" stroke="none" opacity=".5"/>
+  <path d="M40 350q60-9 116 0M190 368q64-9 124 0M410 344q60-9 118 0M596 372q66-9 128 0M110 388q70-9 136 0M450 392q70-9 136 0M280 402q60-8 116 0M660 396q56-8 108 0" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".45" stroke-linecap="round"/>
+  <path d="M0 412q140-20 280-4t250-8 270 10V500H0z" fill="#efe1c0" stroke="#2f3d2a" stroke-width="2.8" /><path d="M0 412q140-20 280-4t250-8 270 10V500H0z" fill="url(#hf)" stroke="none" opacity=".42"/>
+  <path d="M0 438q160-16 300-4t260-8 240 8M0 466q180-14 340-4t260-6 200 6" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".28" stroke-linecap="round"/>
+
+  <!-- The wayfinding post: two arms pointing opposite ways, and a lashed rope. -->
+  <g><path d="M252 452V240h16v212z" fill="#e0d0ac" stroke="#2f3d2a" stroke-width="2.8" />
+     <path d="M268 256h56l14 15-14 15h-56z" fill="#e2b877" stroke="#2f3d2a" stroke-width="2.4" />
+     <path d="M252 302h-56l-14 15 14 15h56z" fill="#dfd0ab" stroke="#2f3d2a" stroke-width="2.4" />
+     <path d="M280 264h32M280 278h30M212 310h32M214 324h30" fill="none" stroke="#2f3d2a" stroke-width="1.8" opacity=".5" stroke-linecap="round"/>
+     <path d="M253 350h14M253 360h14M253 370h14" fill="none" stroke="#2f3d2a" stroke-width="2.2" opacity=".65" stroke-linecap="round"/>
+     <path d="M246 240h28v-10h-28z" fill="#cbb08a" stroke="#2f3d2a" stroke-width="2.4" /></g>
+
+  <!-- A beached boat: pointed at the bow, with thwarts, ribs and an oar. -->
+  <g><path d="M432 386Q566 412 698 384Q690 452 566 462Q446 452 432 386Z" fill="#e3d5b2" stroke="#2f3d2a" stroke-width="3" /><path d="M432 386Q566 412 698 384Q690 452 566 462Q446 452 432 386Z" fill="url(#hf)" stroke="none" opacity=".26"/><path d="M432 386Q566 412 698 384Q690 452 566 462Q446 452 432 386Z" fill="none" stroke="#2f3d2a" stroke-width="3" />
+     <path d="M442 392Q566 418 688 390" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".55" stroke-linecap="round"/>
+     <path d="M456 416Q566 444 676 414" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".35" stroke-linecap="round"/>
+     <path d="M502 404v42M552 412v44M604 412v42M652 404v36" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".4" stroke-linecap="round"/>
+     <path d="M494 418h44v11h-44z" fill="#cbb08a" stroke="#2f3d2a" stroke-width="2.2" />
+     <path d="M596 422h48v11h-48z" fill="#cbb08a" stroke="#2f3d2a" stroke-width="2.2" />
+     <path d="M517 407l-116 55 5 11 116-55z" fill="#cbb08a" stroke="#2f3d2a" stroke-width="2.2" />
+     <path d="M403 460l-25 12 8 17 25-12z" fill="#c9a878" stroke="#2f3d2a" stroke-width="2.2" />
+     <path d="M434 396q-56 14-100 4t-62-30" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".55" stroke-linecap="round"/></g>
+
+  <!-- Driftwood bench on the dry sand, with the whole cove behind it. -->
+  <g><path d="M78 448h150v14H78z" fill="#cbb08a" stroke="#2f3d2a" stroke-width="2.6" /><path d="M78 448h150v14H78z" fill="url(#hx2)" stroke="none" opacity=".3"/>
+     <path d="M100 462v26M206 462v26M88 470h28M192 470h28" fill="none" stroke="#2f3d2a" stroke-width="2.8" opacity=".8" stroke-linecap="round"/>
+     <path d="M84 456h138" fill="none" stroke="#2f3d2a" stroke-width="1.8" opacity=".5" stroke-linecap="round"/></g>
+
+  <path d="M290 462q3-19 20-17q22-4 32 17z" fill="#cbb894" stroke="#2f3d2a" stroke-width="2.4" /><path d="M290 462q3-19 20-17q22-4 32 17z" fill="url(#hx2)" stroke="none" opacity=".38"/><path d="M708 452q3-20 21-18q24-4 35 18z" fill="#cbb894" stroke="#2f3d2a" stroke-width="2.4" /><path d="M708 452q3-20 21-18q24-4 35 18z" fill="url(#hx2)" stroke="none" opacity=".38"/><path d="M673 470q2-13 14-12q16-3 24 12z" fill="#cbb894" stroke="#2f3d2a" stroke-width="2.4" /><path d="M673 470q2-13 14-12q16-3 24 12z" fill="url(#hx2)" stroke="none" opacity=".38"/><path d="M345 480q2-12 13-11q14-3 21 11z" fill="#cbb894" stroke="#2f3d2a" stroke-width="2.4" /><path d="M345 480q2-12 13-11q14-3 21 11z" fill="url(#hx2)" stroke="none" opacity=".38"/>
+  <path d="M44 476q-2-16 -10-21M44 476q0-18 2-25M44 476q3-15 12-20" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".8" stroke-linecap="round"/><path d="M60 490q-2-13 -9-17M60 490q0-15 2-21M60 490q3-12 10-16" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".8" stroke-linecap="round"/><path d="M256 480q-2-14 -9-18M256 480q0-16 2-22M256 480q3-13 10-17" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".8" stroke-linecap="round"/><path d="M288 490q-2-12 -8-15M288 490q0-14 2-19M288 490q3-11 8-14" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".8" stroke-linecap="round"/><path d="M756 470q-2-15 -9-19M756 470q0-17 2-23M756 470q3-14 10-18" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".8" stroke-linecap="round"/><path d="M784 482q-2-13 -8-16M784 482q0-14 2-20M784 482q3-12 9-15" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".8" stroke-linecap="round"/><path d="M404 486q-2-13 -9-17M404 486q0-15 2-21M404 486q3-12 10-16" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".8" stroke-linecap="round"/><path d="M438 478q-2-15 -10-20M438 478q0-18 2-24M438 478q3-14 11-19" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".8" stroke-linecap="round"/>
+  <path d="M121 118q4-5 9 0q4-5 9 0" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".5" stroke-linecap="round"/><path d="M167 96q4-5 9 0q4-5 9 0" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".5" stroke-linecap="round"/><path d="M209 128q4-5 9 0q4-5 9 0" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".5" stroke-linecap="round"/><path d="M667 108q4-5 9 0q4-5 9 0" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".5" stroke-linecap="round"/><path d="M707 132q4-5 9 0q4-5 9 0" fill="none" stroke="#2f3d2a" stroke-width="2" opacity=".5" stroke-linecap="round"/>
+  <path d="M40 490h720" fill="none" stroke="#2f3d2a" stroke-width="2.4" opacity=".45" stroke-linecap="round"/>
 </g>
 <rect width="800" height="500" filter="url(#grain)" opacity=".75"/>
 </svg>
